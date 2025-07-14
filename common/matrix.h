@@ -1,80 +1,105 @@
+/**
+ * @file matrix.h
+ * @brief Abstract representation of a 2D matrix and basic operations (C version).
+ *
+ * Provides a struct and functions for creating, accessing, and manipulating 2D matrices of int8_t values.
+ * All memory management is explicit; the user is responsible for freeing matrices and arrays returned by functions.
+ */
 #ifndef MATRIX_H
 #define MATRIX_H
 
-struct Matrix {
-    int16_t rows;
-    int16_t cols;
-    int8_t* data;
+#include <stdint.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-    // Constructor to initialize the matrix with given dimensions
-    Matrix(int16_t rows, int16_t cols, int8_t **data) : rows(rows), cols(cols) {
-        this->data = new int8_t[rows * cols];
-        for (int r = 0; r < rows; ++r) {
-            for (int c = 0; c < cols; ++c) {
-                this->data[r * cols + c] = data[r][c];
-            }
-        }
-    }
+/**
+ * @brief Matrix struct representing a 2D matrix of int8_t values.
+ *
+ * Data is stored in row-major order.
+ */
+typedef struct {
+    int16_t rows; ///< Number of rows
+    int16_t cols; ///< Number of columns
+    int8_t* data; ///< Pointer to matrix data (row-major order, size rows*cols)
+} Matrix;
 
-    // Function to get a specific row as a pointer
-    int8_t* get_row(int r) const {
-        return &data[r * cols];
-    }
+/**
+ * @brief Create a new matrix from a 2D array.
+ * @param rows Number of rows.
+ * @param cols Number of columns.
+ * @param data 2D array of int8_t values (array of pointers to rows).
+ * @return Pointer to new Matrix, or NULL on failure.
+ */
+Matrix* matrix_create(int16_t rows, int16_t cols, int8_t **data);
 
-    // Function to get a specific column as a dynamically allocated array
-    int8_t* get_col(int c) const {
-        int8_t* col = new int8_t[rows];
-        for (int r = 0; r < rows; ++r) {
-            col[r] = data[r * cols + c];
-        }
-        return col;
-    }
-    
-    // Clone the matrix (deep copy)
-    Matrix* clone() const {
-        int8_t** temp = new int8_t*[rows];
-        for (int r = 0; r < rows; ++r) {
-            temp[r] = new int8_t[cols];
-            for (int c = 0; c < cols; ++c) {
-                temp[r][c] = data[r * cols + c];
-            }
-        }
-        Matrix* copy = new Matrix(rows, cols, temp);
-        for (int r = 0; r < rows; ++r) {
-            delete[] temp[r];
-        }
-        delete[] temp;
-        return copy;
-    }
+/**
+ * @brief Free the memory used by a Matrix.
+ * @param mat Pointer to Matrix to free.
+ */
+void matrix_free(Matrix* mat);
 
-    // Compare two matrices for equality
-    bool compare(const Matrix& other) const {
-        if (rows != other.rows || cols != other.cols) return false;
-        for (int i = 0; i < rows * cols; ++i) {
-            if (data[i] != other.data[i]) return false;
-        }
-        return true;
-    }
+/**
+ * @brief Get a pointer to the start of a specific row.
+ * @param mat Pointer to Matrix.
+ * @param r Row index.
+ * @return Pointer to the row (within mat->data), or NULL if out of bounds.
+ */
+int8_t* matrix_get_row(const Matrix* mat, int r);
 
-    // Print the matrix to stdout
-    void sprint() const {
-        for (int r = 0; r < rows; ++r) {
-            for (int c = 0; c < cols; ++c) {
-                printf("%d ", data[r * cols + c]);
-            }
-            printf("\n");
-        }
-    }
+/**
+ * @brief Get a dynamically allocated array containing a specific column.
+ * @param mat Pointer to Matrix.
+ * @param c Column index.
+ * @return Pointer to new column array (caller must free), or NULL if out of bounds.
+ */
+int8_t* matrix_get_col(const Matrix* mat, int c);
 
-    // Destructor to free allocated memory
-    ~Matrix() {
-        delete[] data;
-    }
+/**
+ * @brief Create a deep copy of a matrix.
+ * @param mat Pointer to Matrix.
+ * @return Pointer to new Matrix (caller must free), or NULL on failure.
+ */
+Matrix* matrix_clone(const Matrix* mat);
 
-    // Function to access elements in the matrix
-    double& operator()(int r, int c) {
-        return data[r * cols + c];
-    }
-};
+/**
+ * @brief Compare two matrices for equality.
+ * @param a Pointer to first Matrix.
+ * @param b Pointer to second Matrix.
+ * @return true if matrices are equal, false otherwise.
+ */
+bool matrix_compare(const Matrix* a, const Matrix* b);
+
+/**
+ * @brief Return a string representation of the matrix.
+ * @param mat Pointer to Matrix.
+ * @return Pointer to new string (caller must free), or NULL on failure.
+ */
+char* matrix_sprint(const Matrix* mat);
+
+/**
+ * @brief Print the matrix to stdout.
+ * @param mat Pointer to Matrix.
+ */
+void matrix_print(const Matrix* mat);
+
+/**
+ * @brief Access an element in the matrix.
+ * @param mat Pointer to Matrix.
+ * @param r Row index.
+ * @param c Column index.
+ * @return Value at (r, c), or 0 if out of bounds.
+ */
+int8_t matrix_get(const Matrix* mat, int r, int c);
+
+/**
+ * @brief Set an element in the matrix.
+ * @param mat Pointer to Matrix.
+ * @param r Row index.
+ * @param c Column index.
+ * @param value Value to set.
+ * @return 0 on success, -1 if out of bounds.
+ */
+int matrix_set(Matrix* mat, int r, int c, int8_t value);
 
 #endif // MATRIX_H
