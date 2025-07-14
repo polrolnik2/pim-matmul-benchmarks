@@ -4,3 +4,6 @@
 sources:
   - common/matrix.c
   
+include_dirs:
+  - common/
+  - lib/simplepim/
