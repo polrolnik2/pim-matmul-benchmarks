@@ -1,3 +1,9 @@
+CC ?= gcc
+
+# Helper to extract sources from YAML
+DEPS_YAML := defn/dependencies.yaml
+DEPS_SRCS := $(shell python3 -c "import yaml,sys; print(' '.join(yaml.safe_load(open('$(DEPS_YAML)'))['sources']))" 2>/dev/null || echo "")
+
 SimplePIM:
 	git clone --depth 1 --filter=blob:none --sparse https://github.com/CMU-SAFARI/SimplePIM.git lib/simplepim
 	cd lib/simplepim && git sparse-checkout set lib
@@ -7,4 +13,23 @@ SimplePIM:
 clean:
 	rm -rf lib/simplepim
 
-.PHONY: SimplePIM clean
+BIN_DIR := bin
+
+# Compile and run all C unittests in tests/
+UNITTEST_SRCS := $(wildcard tests/*-unittests.c)
+UNITTEST_BINS := $(patsubst tests/%.c,$(BIN_DIR)/%,$(UNITTEST_SRCS))
+
+CFLAGS += -Icommon
+
+build-unittests: $(UNITTEST_BINS)
+
+run-unittests: build-unittests
+	@set -e; for t in $(UNITTEST_BINS); do echo "Running $$t"; ./$$t; done
+
+$(BIN_DIR)/%: tests/%.c $(DEPS_SRCS) | $(BIN_DIR)
+	$(CC) $(CFLAGS) $< $(DEPS_SRCS) -o $@
+
+$(BIN_DIR):
+	@mkdir -p $(BIN_DIR)
+
+.PHONY: SimplePIM clean build-unittests run-unittests

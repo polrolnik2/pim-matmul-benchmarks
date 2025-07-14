@@ -1,0 +1,7 @@
+# Source the Python virtual environment for build/test scripts
+if [ -f scripts/pythonenv/bin/activate ]; then
+    . scripts/pythonenv/bin/activate
+    echo "Python virtual environment activated."
+else
+    echo "Warning: scripts/pythonenv/bin/activate not found."
+fi
