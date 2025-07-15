@@ -20,10 +20,12 @@ clean:
 
 BIN_DIR := bin
 
-# Compile and run all C unittests in tests/
-UNITTEST_SRCS := $(wildcard tests/*-unittests.c)
-UNITTEST_BINS := $(patsubst tests/%.c,$(BIN_DIR)/%,$(UNITTEST_SRCS))
+# Helper to extract unittest sources from YAML
+defn/UNITS_YAML := defn/unittests.yaml
+UNITTEST_SRCS := $(shell python3 -c "import yaml; print(' '.join(yaml.safe_load(open('defn/unittests.yaml'))['unittest']))" 2>/dev/null || echo "")
+UNITTEST_BINS := $(patsubst tests/%.c,bin/%,$(UNITTEST_SRCS))
 
+# Compile and run all C unittests in tests/
 build-unittests: $(UNITTEST_BINS)
 
 run-unittests: build-unittests

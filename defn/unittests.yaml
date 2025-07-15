@@ -1,0 +1,3 @@
+# List of all C unittest source files (relative to project root)
+unittest:
+  - tests/matrix-op-unittests.c
