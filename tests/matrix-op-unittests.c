@@ -1,24 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../common/matrix.h"
-
-// Simple assert macro for C
-#define ASSERT_EQ(expr, expected, msg) \
-    if ((expr) != (expected)) { \
-        printf("[FAIL] %s (expected %d, got %d)\n", msg, (int)(expected), (int)(expr)); \
-        return 1; \
-    }
-#define ASSERT_TRUE(expr, msg) \
-    if (!(expr)) { \
-        printf("[FAIL] %s\n", msg); \
-        return 1; \
-    }
-#define ASSERT_STR_EQ(expr, expected, msg) \
-    if (strcmp((expr), (expected)) != 0) { \
-        printf("[FAIL] %s (expected %s, got %s)\n", msg, expected, expr); \
-        return 1; \
-    }
+#include "matrix.h"
+#include "test_assertions.h"
 
 int test_matrix_create_and_free() {
     int8_t row0[] = {1, 2};
