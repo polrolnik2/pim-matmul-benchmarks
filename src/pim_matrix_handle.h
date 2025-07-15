@@ -13,7 +13,7 @@ typedef struct {
     int16_t submatrix_cols; ///< Number of columns in the submatrix
 } pim_matrix_handle_t;
 
-pim_matrix_handle_t* broadcast_matrix_to_pim(const Matrix* matrix, int16_t submatrix_rows, int16_t submatrix_cols);
+pim_matrix_handle_t* broadcast_matrix_to_pim(const Matrix* matrix);
 
 pim_matrix_handle_t* scatter_matrix_to_pim(const Matrix* matrix, int16_t submatrix_rows, int16_t submatrix_cols);
 
