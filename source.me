@@ -1,7 +1,15 @@
-# Source the Python virtual environment for build/test scripts
-if [ -f scripts/pythonenv/bin/activate ]; then
-    . scripts/pythonenv/bin/activate
-    echo "Python virtual environment activated."
-else
-    echo "Warning: scripts/pythonenv/bin/activate not found."
+# Mark the current folder as project root
+export PIM_MATMUL_BENCHMARKS_ROOT="$(pwd)"
+
+# Ensure Python virtual environment exists and activate it
+if [ ! -f scripts/pythonenv/bin/activate ]; then
+    echo "Creating Python virtual environment in scripts/pythonenv..."
+    python3 -m venv scripts/pythonenv
 fi
+. scripts/pythonenv/bin/activate
+
+# Ensure pyyaml is installed
+pip install --quiet --upgrade pip
+pip install --quiet pyyaml
+
+echo "Python virtual environment activated and pyyaml installed."

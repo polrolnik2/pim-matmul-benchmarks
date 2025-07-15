@@ -1,0 +1,24 @@
+# tests/Makefile
+# Usage: make -C tests run FILE=matrix-op-unittests.c
+
+# Use project root from environment variable
+ROOT := $(PIM_MATMUL_BENCHMARKS_ROOT)
+
+CC ?= gcc
+BIN_DIR := $(ROOT)/bin
+DEPS_YAML := $(ROOT)/defn/dependencies.yaml
+DEPS_SRCS := $(shell python3 -c "import yaml,sys; print(' '.join('$(ROOT)/'+s for s in yaml.safe_load(open('$(DEPS_YAML)'))['sources']))" 2>/dev/null || echo "")
+INCLUDE_DIRS := $(shell python3 -c "import yaml; print(' '.join('-I$(ROOT)/'+d for d in yaml.safe_load(open('$(DEPS_YAML)'))['include_dirs']))" 2>/dev/null || echo "")
+CFLAGS += $(INCLUDE_DIRS)
+CFLAGS += -Icommon/
+
+run:
+	@if [ -z "$(FILE)" ]; then \
+		echo "Usage: make run FILE=yourtest.c"; \
+		exit 1; \
+	fi; \
+	name=$$(basename $(FILE) .c); \
+	mkdir -p $(BIN_DIR); \
+	$(CC) $(CFLAGS) $(FILE) $(DEPS_SRCS) -o $(BIN_DIR)/$$name; \
+	echo "Running $(BIN_DIR)/$$name"; \
+	$(BIN_DIR)/$$name

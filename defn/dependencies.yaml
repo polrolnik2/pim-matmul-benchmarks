@@ -2,8 +2,8 @@
 # List all C source files (relative to project root) that should be compiled/linked
 
 sources:
-  - common/matrix.c
+  - src/matrix.c
   
 include_dirs:
-  - common/
+  - src/
   - lib/simplepim/

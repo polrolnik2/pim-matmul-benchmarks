@@ -1,11 +1,12 @@
 CC ?= gcc
 
-# Helper to extract sources from YAML
-DEPS_YAML := defn/dependencies.yaml
-DEPS_SRCS := $(shell python3 -c "import yaml,sys; print(' '.join(yaml.safe_load(open('$(DEPS_YAML)'))['sources']))" 2>/dev/null || echo "")
+# Use project root from environment variable
+ROOT ?= $(PIM_MATMUL_BENCHMARKS_ROOT)
 
-# Helper to extract include dirs from YAML and convert to -I flags
-INCLUDE_DIRS := $(shell python3 -c "import yaml; print(' '.join('-I'+d for d in yaml.safe_load(open('defn/dependencies.yaml'))['include_dirs']))" 2>/dev/null || echo "")
+# Helper to extract sources from YAML
+DEPS_YAML := $(ROOT)/defn/dependencies.yaml
+DEPS_SRCS := $(shell python3 -c "import yaml,sys; print(' '.join(yaml.safe_load(open('$(DEPS_YAML)'))['sources']))" 2>/dev/null || echo "")
+INCLUDE_DIRS := $(shell python3 -c "import yaml; print(' '.join('-I'+d for d in yaml.safe_load(open('$(DEPS_YAML)'))['include_dirs']))" 2>/dev/null || echo "")
 
 CFLAGS += $(INCLUDE_DIRS)
 
@@ -17,24 +18,25 @@ SimplePIM:
 
 clean:
 	rm -rf lib/simplepim
+	rm -rf $(BIN_DIR)
 
 BIN_DIR := bin
 
 # Helper to extract unittest sources from YAML
-defn/UNITS_YAML := defn/unittests.yaml
 UNITTEST_SRCS := $(shell python3 -c "import yaml; print(' '.join(yaml.safe_load(open('defn/unittests.yaml'))['unittest']))" 2>/dev/null || echo "")
-UNITTEST_BINS := $(patsubst tests/%.c,bin/%,$(UNITTEST_SRCS))
+UNITTEST_BINS := $(addprefix bin/,$(basename $(notdir $(UNITTEST_SRCS))))
 
-# Compile and run all C unittests in tests/
+# Ensure bin/ exists
+bin:
+	@mkdir -p bin
+
 build-unittests: $(UNITTEST_BINS)
 
-run-unittests: build-unittests
-	@set -e; for t in $(UNITTEST_BINS); do echo "Running $$t"; ./$$t; done
-
-$(BIN_DIR)/%: tests/%.c $(DEPS_SRCS) | $(BIN_DIR)
-	$(CC) $(CFLAGS) $< $(DEPS_SRCS) -o $@
-
-$(BIN_DIR):
-	@mkdir -p $(BIN_DIR)
+run-unittests:
+	@set -e; \
+	for t in $(UNITTEST_SRCS); do \
+	  echo "Building and running $$t"; \
+	  make -C tests run FILE=$$(basename $$t); \
+	done
 
 .PHONY: SimplePIM clean build-unittests run-unittests
