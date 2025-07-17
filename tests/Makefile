@@ -19,6 +19,6 @@ run:
 	fi; \
 	name=$$(basename $(FILE) .c); \
 	mkdir -p $(BIN_DIR); \
-	$(CC) $(CFLAGS) $(FILE) $(DEPS_SRCS) -o $(BIN_DIR)/$$name; \
+	$(CC) $(CFLAGS) $(FILE) $(DEPS_SRCS) -o $(BIN_DIR)/$$name `dpu-pkg-config --cflags --libs dpu`; \
 	echo "Running $(BIN_DIR)/$$name"; \
 	$(BIN_DIR)/$$name
