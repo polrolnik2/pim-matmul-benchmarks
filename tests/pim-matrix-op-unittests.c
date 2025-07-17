@@ -3,6 +3,13 @@
 #include <string.h>
 #include "test_assertions.h"
 
+#include "processing/map/Map.h"
+#include "processing/zip/Zip.h"
+#include "processing/gen_red/GenRed.h"
+#include "processing/ProcessingHelperHost.h"
+#include "communication/CommOps.h"
+#include "management/Management.h"
+
 #include "matrix.h"
 #include "pim_matrix_handle.h"
 
@@ -97,6 +104,70 @@ int test_pim_multiply_matrices() {
     pim_matrix_handle_t* handle1 = broadcast_matrix_to_pim(mat1);
     pim_matrix_handle_t* handle2 = broadcast_matrix_to_pim(mat2);
     ASSERT_TRUE(handle1 != NULL && handle2 != NULL, "Broadcast to PIM failed");
+    pim_matrix_handle_t* result_handle = multiply_pim_matrices(handle1, handle2);
+    ASSERT_TRUE(result_handle != NULL, "Multiply PIM matrices failed");
+    Matrix* result = gather_matrix_from_pim(result_handle->pim_handle, mat1->rows, mat1->cols);
+    ASSERT_TRUE(result != NULL, "Gather from PIM failed");
+    Matrix* expected = matrix_create(2, 2, (int8_t*[]) {
+        (int8_t[]){19, 22},
+        (int8_t[]){43, 50}
+    });
+    ASSERT_TRUE(matrix_compare(result, expected), "Result matrix should match expected");
+    matrix_free(mat1);
+    matrix_free(mat2);
+    matrix_free(result);
+    matrix_free(expected);
+    free_pim_matrix_handle(handle1);
+    free_pim_matrix_handle(handle2);
+    free_pim_matrix_handle(result_handle);
+    return 0;
+}
+
+int test_adding_scattered_matrices() {
+    Matrix* mat1 = matrix_create(2, 2, (int8_t*[]) {
+        (int8_t[]){1, 2},
+        (int8_t[]){3, 4}
+    });
+    Matrix* mat2 = matrix_create(2, 2, (int8_t*[]) {
+        (int8_t[]){5, 6},
+        (int8_t[]){7, 8}
+    });
+    ASSERT_TRUE(mat1 != NULL && mat2 != NULL, "Matrix creation failed");
+    pim_matrix_handle_t* handle1 = scatter_matrix_to_pim(mat1, 1, 1);
+    pim_matrix_handle_t* handle2 = scatter_matrix_to_pim(mat2, 1, 1);
+    ASSERT_TRUE(handle1 != NULL && handle2 != NULL, "Scatter to PIM failed");
+    pim_matrix_handle_t* result_handle = add_pim_matrices(handle1, handle2);
+    ASSERT_TRUE(result_handle != NULL, "Add PIM matrices failed");
+    Matrix* result = gather_matrix_from_pim(result_handle->pim_handle, mat1->rows, mat1->cols);
+    ASSERT_TRUE(result != NULL, "Gather from PIM failed");
+    Matrix* expected = matrix_create(2, 2, (int8_t*[]) {
+        (int8_t[]){6, 8},
+        (int8_t[]){10, 12}
+    });
+    ASSERT_TRUE(matrix_compare(result, expected), "Result matrix should match expected");
+    matrix_free(mat1);
+    matrix_free(mat2);
+    matrix_free(result);
+    matrix_free(expected);
+    free_pim_matrix_handle(handle1);
+    free_pim_matrix_handle(handle2);
+    free_pim_matrix_handle(result_handle);  
+    return 0;
+}
+
+int test_multiplying_scattered_matrices() {
+    Matrix* mat1 = matrix_create(2, 2, (int8_t*[]) {
+        (int8_t[]){1, 2},
+        (int8_t[]){3, 4}
+    });
+    Matrix* mat2 = matrix_create(2, 2, (int8_t*[]) {
+        (int8_t[]){5, 6},
+        (int8_t[]){7, 8}
+    });
+    ASSERT_TRUE(mat1 != NULL && mat2 != NULL, "Matrix creation failed");
+    pim_matrix_handle_t* handle1 = scatter_matrix_to_pim(mat1, 1, 1);
+    pim_matrix_handle_t* handle2 = scatter_matrix_to_pim(mat2, 1, 1);
+    ASSERT_TRUE(handle1 != NULL && handle2 != NULL, "Scatter to PIM failed");
     pim_matrix_handle_t* result_handle = multiply_pim_matrices(handle1, handle2);
     ASSERT_TRUE(result_handle != NULL, "Multiply PIM matrices failed");
     Matrix* result = gather_matrix_from_pim(result_handle->pim_handle, mat1->rows, mat1->cols);

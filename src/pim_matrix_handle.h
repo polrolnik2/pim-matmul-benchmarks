@@ -28,7 +28,7 @@ typedef struct {
  * @param matrix Pointer to the matrix to broadcast.
  * @return Pointer to a new PIM matrix handle.
  */
-pim_matrix_handle_t* broadcast_matrix_to_pim(const Matrix* matrix);
+pim_matrix_handle_t* broadcast_matrix_to_pim(const Matrix* matrix, simplepim_management_t* management);
 
 /**
  * @brief Scatter a matrix to PIM units as submatrices.
@@ -37,7 +37,7 @@ pim_matrix_handle_t* broadcast_matrix_to_pim(const Matrix* matrix);
  * @param submatrix_cols Number of columns per submatrix.
  * @return Pointer to a new PIM matrix handle.
  */
-pim_matrix_handle_t* scatter_matrix_to_pim(const Matrix* matrix, int16_t submatrix_rows, int16_t submatrix_cols);
+pim_matrix_handle_t* scatter_matrix_to_pim(const Matrix* matrix, int16_t submatrix_rows, int16_t submatrix_cols, simplepim_management_t* management);
 
 /**
  * @brief Gather a matrix from PIM using a handle.
@@ -46,13 +46,13 @@ pim_matrix_handle_t* scatter_matrix_to_pim(const Matrix* matrix, int16_t submatr
  * @param cols Number of columns in the matrix.
  * @return Pointer to a new Matrix object.
  */
-Matrix* gather_matrix_from_pim(const char *handle, int16_t rows, int16_t cols);
+Matrix* gather_matrix_from_pim(pim_matrix_handle_t *handle, int16_t rows, int16_t cols, simplepim_management_t* management);
 
 /**
  * @brief Free a PIM matrix handle and associated resources.
  * @param handle Pointer to the PIM matrix handle to free.
  */
-void free_pim_matrix_handle(pim_matrix_handle_t* handle);
+void free_pim_matrix_handle(pim_matrix_handle_t* handle, simplepim_management_t* management);
 
 /**
  * @brief Add two matrices in PIM.
@@ -60,7 +60,7 @@ void free_pim_matrix_handle(pim_matrix_handle_t* handle);
  * @param handle2 Pointer to the second PIM matrix handle.
  * @return Pointer to a new PIM matrix handle representing the sum.
  */
-pim_matrix_handle_t* add_pim_matrices(const pim_matrix_handle_t* handle1, const pim_matrix_handle_t* handle2);
+pim_matrix_handle_t* add_pim_matrices(const pim_matrix_handle_t* handle1, const pim_matrix_handle_t* handle2, simplepim_management_t* management);
 
 /**
  * @brief Multiply two matrices in PIM.
@@ -68,6 +68,6 @@ pim_matrix_handle_t* add_pim_matrices(const pim_matrix_handle_t* handle1, const 
  * @param handle2 Pointer to the second PIM matrix handle.
  * @return Pointer to a new PIM matrix handle representing the product.
  */
-pim_matrix_handle_t* multiply_pim_matrices(const pim_matrix_handle_t* handle1, const pim_matrix_handle_t* handle2);
+pim_matrix_handle_t* multiply_pim_matrices(const pim_matrix_handle_t* handle1, const pim_matrix_handle_t* handle2, simplepim_management_t* management);
 
 #endif // __PIM_MATRIX_HANDLE_H___
