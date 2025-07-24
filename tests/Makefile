@@ -10,7 +10,7 @@ DEPS_YAML := $(ROOT)/defn/dependencies.yaml
 DEPS_SRCS := $(shell python3 -c "import yaml,sys; print(' '.join('$(ROOT)/'+s for s in yaml.safe_load(open('$(DEPS_YAML)'))['sources']))" 2>/dev/null || echo "")
 INCLUDE_DIRS := $(shell python3 -c "import yaml; print(' '.join('-I$(ROOT)/'+d for d in yaml.safe_load(open('$(DEPS_YAML)'))['include_dirs']))" 2>/dev/null || echo "")
 CFLAGS += $(INCLUDE_DIRS)
-CFLAGS += -Icommon/
+CFLAGS += -Icommon/ 
 
 run:
 	@if [ -z "$(FILE)" ]; then \
@@ -20,6 +20,6 @@ run:
 	name=$$(basename $(FILE) .c); \
 	touch $(ROOT)/scratch/unittest_$$name.log; \
 	mkdir -p $(BIN_DIR); \
-	$(CC) $(CFLAGS) $(FILE) $(DEPS_SRCS) -o $(BIN_DIR)/$$name `dpu-pkg-config --cflags --libs dpu` 2>&1 | tee $(ROOT)/scratch/unittest_$$name.log; \
+	$(CC) $(CFLAGS) $(FILE) $(DEPS_SRCS) -o $(BIN_DIR)/$$name `dpu-pkg-config --cflags --libs dpu` -ldl -lelf -lpython3.7m -lnuma -lgomp 2>&1 | tee $(ROOT)/scratch/unittest_$$name.log; \
 	echo "Running $(BIN_DIR)/$$name"; \
 	$(BIN_DIR)/$$name
