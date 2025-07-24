@@ -5,7 +5,7 @@
 #include "matrix.h"
 #include <string.h>
 
-Matrix* matrix_create(int16_t rows, int16_t cols, int8_t **data) {
+Matrix* matrix_create_from_2d_array(int16_t rows, int16_t cols, int8_t **data) {
     if (rows <= 0 || cols <= 0) return NULL;
     Matrix* mat = (Matrix*)malloc(sizeof(Matrix));
     if (!mat) return NULL;
@@ -21,6 +21,21 @@ Matrix* matrix_create(int16_t rows, int16_t cols, int8_t **data) {
             mat->data[r * cols + c] = data[r][c];
         }
     }
+    return mat;
+}
+
+Matrix* matrix_create_from_row_major_array(int16_t rows, int16_t cols, int8_t *data) {
+    if (rows <= 0 || cols <= 0 || !data) return NULL;
+    Matrix* mat = (Matrix*)malloc(sizeof(Matrix));
+    if (!mat) return NULL;
+    mat->rows = rows;
+    mat->cols = cols;
+    mat->data = (int8_t*)malloc(rows * cols * sizeof(int8_t));
+    if (!mat->data) {
+        free(mat);
+        return NULL;
+    }
+    memcpy(mat->data, data, rows * cols * sizeof(int8_t));
     return mat;
 }
 

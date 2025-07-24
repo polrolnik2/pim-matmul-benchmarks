@@ -31,7 +31,15 @@ typedef struct {
  * @param data 2D array of int8_t values (array of pointers to rows).
  * @return Pointer to new Matrix, or NULL on failure.
  */
-Matrix* matrix_create(int16_t rows, int16_t cols, int8_t **data);
+Matrix* matrix_create_from_2d_array(int16_t rows, int16_t cols, int8_t **data);
+
+/**
+ * @brief Create a new matrix with specified dimensions from a row majow array.
+ * @param rows Number of rows.
+ * @param cols Number of columns.
+ * @return Pointer to new Matrix, or NULL on failure.
+ */
+Matrix* matrix_create_from_row_major_array(int16_t rows, int16_t cols, int8_t *data);
 
 /**
  * @brief Free the memory used by a Matrix.
