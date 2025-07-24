@@ -1,3 +1,10 @@
+# Docker image name
+DOCKER_IMAGE := pim-matmul-dev
+
+# Build the Docker image
+docker-build:
+	docker build -q --platform linux/amd64 -t $(DOCKER_IMAGE) .
+
 CC ?= gcc
 
 # Use project root from environment variable
@@ -32,11 +39,15 @@ bin:
 
 build-unittests: $(UNITTEST_BINS)
 
-run-unittests:
-	@set -e; \
+run-unittests: docker-build
+	@mkdir -p scratch; \
+	set -e; \
 	for t in $(UNITTEST_SRCS); do \
 	  echo "Building and running $$t"; \
-	  make -C tests run FILE=$$(basename $$t); \
+	  docker run --rm --platform linux/amd64 -v $(CURDIR):/workspace $(DOCKER_IMAGE) bash -c \
+		". /opt/upmem-2025.1.0-Linux-x86_64/upmem_env.sh simulator && \
+		. /workspace/source.me && \
+		make -C tests run FILE=$$(basename $$t)"; \
 	done
 
 .PHONY: SimplePIM clean build-unittests run-unittests

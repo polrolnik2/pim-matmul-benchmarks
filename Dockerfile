@@ -27,12 +27,11 @@ ENV LD_LIBRARY_PATH="/opt/upmem-2025.1.0-Linux-x86_64/lib"
 WORKDIR /workspace
 COPY . /workspace
 
+SHELL ["/bin/bash", "-c"]
 
 # Source the upmem_env.sh script
-RUN echo '. /opt/upmem-2025.1.0-Linux-x86_64/upmem_env.sh simulator' >> /root/.bashrc
+RUN source /opt/upmem-2025.1.0-Linux-x86_64/upmem_env.sh simulator
 
 # Source the environment script
-RUN echo '. /workspace/source.me' >> /root/.bashrc
+RUN source /workspace/source.me
 
-# Default command
-CMD ["bash"]

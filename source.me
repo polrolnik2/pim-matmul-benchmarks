@@ -1,2 +1,15 @@
 # Mark the current folder as project root
 export PIM_MATMUL_BENCHMARKS_ROOT="$(pwd)"
+
+if [ "$(id -u)" -ne 0 ]; then
+
+    if [ ! -f scripts/pim-matmul-env/bin/activate ]; then
+        python3 -q -m venv scripts/pim-matmul-env
+    fi
+    . scripts/pim-matmul-env/bin/activate
+
+    # Ensure pyyaml is installed
+    pip install --quiet --upgrade pip
+    pip install --quiet pyyaml
+
+fi

@@ -18,7 +18,8 @@ run:
 		exit 1; \
 	fi; \
 	name=$$(basename $(FILE) .c); \
+	touch $(ROOT)/scratch/unittest_$$name.log; \
 	mkdir -p $(BIN_DIR); \
-	$(CC) $(CFLAGS) $(FILE) $(DEPS_SRCS) -o $(BIN_DIR)/$$name `dpu-pkg-config --cflags --libs dpu`; \
+	$(CC) $(CFLAGS) $(FILE) $(DEPS_SRCS) -o $(BIN_DIR)/$$name `dpu-pkg-config --cflags --libs dpu` 2>&1 | tee $(ROOT)/scratch/unittest_$$name.log; \
 	echo "Running $(BIN_DIR)/$$name"; \
 	$(BIN_DIR)/$$name
