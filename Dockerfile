@@ -17,7 +17,7 @@ RUN apt-get update && \
     apt-get clean
 
 # Install UPMEM SDK
-RUN wget http://sdk-releases.upmem.com/2025.1.0/debian_10/upmem-2025.1.0-Linux-x86_64.tar.gz && \
+RUN wget http://sdk-releases.upmem.com/2025.1.0/ubuntu_22.04/upmem-2025.1.0-Linux-x86_64.tar.gz && \
     tar -xzf upmem-2025.1.0-Linux-x86_64.tar.gz -C /opt && \
     rm upmem-2025.1.0-Linux-x86_64.tar.gz
 
