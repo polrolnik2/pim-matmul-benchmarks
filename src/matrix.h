@@ -21,7 +21,7 @@
 typedef struct {
     int16_t rows; ///< Number of rows
     int16_t cols; ///< Number of columns
-    int8_t* data; ///< Pointer to matrix data (row-major order, size rows*cols)
+    int8_t** data; ///< Pointer to matrix data (array of pointers to rows)
 } Matrix;
 
 /**
@@ -40,6 +40,8 @@ Matrix* matrix_create_from_2d_array(int16_t rows, int16_t cols, int8_t **data);
  * @return Pointer to new Matrix, or NULL on failure.
  */
 Matrix* matrix_create_from_row_major_array(int16_t rows, int16_t cols, int8_t *data);
+
+Matrix* matrix_create_from_column_major_array(int16_t rows, int16_t cols, int8_t *data);
 
 /**
  * @brief Free the memory used by a Matrix.
