@@ -41,6 +41,12 @@ Matrix* matrix_create_from_2d_array(int16_t rows, int16_t cols, int8_t **data);
  */
 Matrix* matrix_create_from_row_major_array(int16_t rows, int16_t cols, int8_t *data);
 
+/**
+ * @brief Create a new matrix with specified dimensions from a column major array.
+ * @param rows Number of rows.
+ * @param cols Number of columns.
+ * @return Pointer to new Matrix, or NULL on failure.
+ */
 Matrix* matrix_create_from_column_major_array(int16_t rows, int16_t cols, int8_t *data);
 
 /**
@@ -111,5 +117,37 @@ int8_t matrix_get(const Matrix* mat, int r, int c);
  * @return 0 on success, -1 if out of bounds.
  */
 int matrix_set(Matrix* mat, int r, int c, int8_t value);
+
+/**
+ * @brief Split a matrix into multiple submatrices by rows.
+ * @param mat Pointer to Matrix.
+ * @param num_submatrices Number of submatrices to create.
+ * @return Array of pointers to new submatrices (caller must free each submatrix and the array), or NULL on failure.
+ */
+Matrix ** matrix_split_by_rows(const Matrix* mat, int num_submatrices);
+
+/**
+ * @brief Join multiple submatrices into a single matrix by rows.
+ * @param submatrices Array of pointers to submatrices.
+ * @param num_submatrices Number of submatrices.
+ * @return Pointer to new Matrix (caller must free), or NULL on failure.
+ */
+Matrix * matrix_join_by_rows(Matrix **submatrices, int num_submatrices);
+
+/**
+ * @brief Split a matrix into multiple submatrices by columns.
+ * @param mat Pointer to Matrix.
+ * @param num_submatrices Number of submatrices to create.
+ * @return Array of pointers to new submatrices (caller must free each submatrix and the array), or NULL on failure.
+ */
+Matrix ** matrix_split_by_cols(const Matrix* mat, int num_submatrices);
+
+/**
+ * @brief Join multiple submatrices into a single matrix by columns.
+ * @param submatrices Array of pointers to submatrices.
+ * @param num_submatrices Number of submatrices.
+ * @return Pointer to new Matrix (caller must free), or NULL on failure.
+ */
+Matrix * matrix_join_by_cols(Matrix **submatrices, int num_submatrices);
 
 #endif // MATRIX_H
