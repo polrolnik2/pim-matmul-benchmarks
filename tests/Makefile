@@ -18,8 +18,9 @@ run:
 		exit 1; \
 	fi; \
 	name=$$(basename $(FILE) .c); \
-	touch $(ROOT)/scratch/unittest_$$name.log; \
+	mkdir -p $(ROOT)/scratch/compile_logs; \
+	mkdir -p $(ROOT)/scratch/runtime_logs; \
 	mkdir -p $(BIN_DIR); \
-	$(CC) $(CFLAGS) $(FILE) $(DEPS_SRCS) -o $(BIN_DIR)/$$name `dpu-pkg-config --cflags --libs dpu` -ldl -lelf -lpython3.7m -lnuma -lgomp 2>&1 | tee $(ROOT)/scratch/unittest_$$name.log; \
+	$(CC) $(CFLAGS) $(FILE) $(DEPS_SRCS) -o $(BIN_DIR)/$$name `dpu-pkg-config --cflags --libs dpu` -ldl -lelf -lpython3.7m -lnuma -lgomp 2>&1 | tee $(ROOT)/scratch/compile_logs/$$name.log; \
 	echo "Running $(BIN_DIR)/$$name"; \
-	$(BIN_DIR)/$$name
+	$(BIN_DIR)/$$name 2>&1 | tee $(ROOT)/scratch/runtime_logs/$$name.log
