@@ -5,6 +5,7 @@
 #include "test_assertions.h"
 
 int test_matrix_create_from_2d_array_and_free() {
+    printf("Running test_matrix_create_from_2d_array_and_free...\n");
     int8_t row0[] = {1, 2};
     int8_t row1[] = {3, 4};
     int8_t* data[] = {row0, row1};
@@ -22,6 +23,7 @@ int test_matrix_create_from_2d_array_and_free() {
 }
 
 int test_matrix_create_from_row_major_array_and_free() {
+    printf("Running test_matrix_create_from_row_major_array_and_free...\n");
     int8_t data[] = {1, 2, 3, 4};
     Matrix* m = matrix_create_from_row_major_array(2, 2, data);
     ASSERT_TRUE(m != NULL, "Matrix creation failed");
@@ -37,6 +39,7 @@ int test_matrix_create_from_row_major_array_and_free() {
 }
 
 int test_matrix_create_from_column_major_array_and_free() {
+    printf("Running test_matrix_create_from_column_major_array_and_free...\n");
     int8_t data[] = {1, 3, 2, 4};
     Matrix* m = matrix_create_from_column_major_array(2, 2, data);
     ASSERT_TRUE(m != NULL, "Matrix creation failed");
@@ -52,6 +55,7 @@ int test_matrix_create_from_column_major_array_and_free() {
 }
 
 int test_matrix_creation_data_too_small_error() {
+    printf("Running test_matrix_creation_data_too_small_error...\n");
     int8_t data[] = {1, 2}; // Only enough for 1 row of 2 cols
     Matrix* m = matrix_create_from_row_major_array(2, 2, data);
     ASSERT_TRUE(m == NULL, "Matrix creation should fail with insufficient data");
@@ -63,6 +67,7 @@ int test_matrix_creation_data_too_small_error() {
 }
 
 int test_matrix_clone_and_compare() {
+    printf("Running test_matrix_clone_and_compare...\n");
     int8_t row0[] = {1, 2};
     int8_t row1[] = {3, 4};
     int8_t* data[] = {row0, row1};
@@ -77,6 +82,7 @@ int test_matrix_clone_and_compare() {
 }
 
 int test_matrix_get_row_col() {
+    printf("Running test_matrix_get_row_col...\n");
     int8_t row0[] = {1, 2};
     int8_t row1[] = {3, 4};
     int8_t* data[] = {row0, row1};
@@ -100,6 +106,7 @@ int test_matrix_get_row_col() {
 }
 
 int test_get_row_col_out_of_bounds() {
+    printf("Running test_get_row_col_out_of_bounds...\n");
     int8_t row0[] = {1, 2};
     int8_t row1[] = {3, 4};
     int8_t* data[] = {row0, row1};
@@ -113,6 +120,7 @@ int test_get_row_col_out_of_bounds() {
 }
 
 int test_matrix_print_and_sprint() {
+    printf("Running test_matrix_print_and_sprint...\n");
     int8_t row0[] = {1, 2};
     int8_t row1[] = {3, 4};
     int8_t* data[] = {row0, row1};
@@ -125,6 +133,7 @@ int test_matrix_print_and_sprint() {
 }
 
 int test_matrix_row_split_join() {
+    printf("Running test_matrix_row_split_join...\n");
     int8_t row0[] = {1, 2};
     int8_t row1[] = {3, 4};
     int8_t* data[] = {row0, row1};
@@ -148,6 +157,7 @@ int test_matrix_row_split_join() {
 }
 
 int test_matrix_col_split_join() {
+    printf("Running test_matrix_col_split_join...\n");
     int8_t row0[] = {1, 2};
     int8_t row1[] = {3, 4};
     int8_t* data[] = {row0, row1};
@@ -156,10 +166,11 @@ int test_matrix_col_split_join() {
     Matrix* m = matrix_create_from_2d_array(2, 2, data);
     Matrix** submatrices = matrix_split_by_cols(m, 2);
     ASSERT_TRUE(submatrices != NULL && submatrices[0] != NULL && submatrices[1] != NULL, "Column split failed");
-    Matrix* joined = matrix_join_by_cols(submatrices, 2);
-    ASSERT_TRUE(matrix_compare(m, joined), "Column join failed");
     ASSERT_TRUE(matrix_compare(submatrices[0], col_1st), "First submatrix should match");
     ASSERT_TRUE(matrix_compare(submatrices[1], col_2nd), "Second submatrix should match");
+    // Join the submatrices back into a single matrix
+    Matrix* joined = matrix_join_by_cols(submatrices, 2);
+    ASSERT_TRUE(matrix_compare(m, joined), "Column join failed");
     matrix_free(col_1st);
     matrix_free(col_2nd);
     matrix_free(m);
@@ -171,6 +182,7 @@ int test_matrix_col_split_join() {
 }
 
 int test_matrix_split_into_0_error() {
+    printf("Running test_matrix_split_into_0_error...\n");
     int8_t row0[] = {1, 2};
     int8_t row1[] = {3, 4};
     int8_t* data[] = {row0, row1};
@@ -184,6 +196,7 @@ int test_matrix_split_into_0_error() {
 }
 
 int test_matrix_split_into_more_than_rows_cols_error() {
+    printf("Running test_matrix_split_into_more_than_rows_cols_error...\n");
     int8_t row0[] = {1, 2};
     int8_t row1[] = {3, 4};
     int8_t* data[] = {row0, row1};
@@ -197,6 +210,7 @@ int test_matrix_split_into_more_than_rows_cols_error() {
 }
 
 int test_split_matrix_indivisible_error() {
+    printf("Running test_split_matrix_indivisible_error...\n");
     int8_t row0[] = {1, 2, 3};
     int8_t row1[] = {4, 5, 6};
     int8_t row2[] = {7, 8, 9};
@@ -211,15 +225,20 @@ int test_split_matrix_indivisible_error() {
 }
 
 int test_join_unmatching_dimensions_error() {
+    printf("Running test_join_unmatching_dimensions_error...\n");
     int8_t row0[] = {1, 2};
     int8_t row1[] = {3, 4};
     int8_t* data[] = {row0, row1};
     Matrix* m1 = matrix_create_from_2d_array(2, 2, data);
-    Matrix* m2 = matrix_create_from_2d_array(3, 3, (int8_t*[]) {(int8_t[]){5, 6, 7}, (int8_t[]){8, 9, 10}, (int8_t[]){11, 12, 13}});
+    int8_t row0_2[] = {5, 6, 7};
+    int8_t row1_2[] = {8, 9, 10};
+    int8_t row2_2[] = {11, 12, 13};
+    int8_t* data2[] = {row0_2, row1_2, row2_2};
+    Matrix* m2 = matrix_create_from_2d_array(3, 3, data2);
     Matrix* joined = matrix_join_by_rows((Matrix*[]){m1, m2}, 2);
     ASSERT_TRUE(joined == NULL, "Joining matrices with unmatching dimensions should fail");
-    joined = matrix_join_by_cols((Matrix*[]){m1, m2}, 2);
-    ASSERT_TRUE(joined == NULL, "Joining matrices with unmatching dimensions should fail");
+    Matrix* joined_col = matrix_join_by_cols((Matrix*[]){m1, m2}, 2);
+    ASSERT_TRUE(joined_col == NULL, "Joining matrices with unmatching dimensions should fail");
     matrix_free(m1);
     matrix_free(m2);
     return 0;
