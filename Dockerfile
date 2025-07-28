@@ -12,7 +12,7 @@ RUN apt-get update && \
     apt-get update && \
     apt-get install -y build-essential \
     python3 python3-pip python3.7-dev \
-    wget sudo git pkg-config \
+    wget sudo git pkg-config gdb gdb-multiarch \
     libelf-dev libnuma-dev libgomp1 && \
     apt-get clean
 
