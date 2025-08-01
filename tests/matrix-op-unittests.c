@@ -18,6 +18,14 @@ int test_matrix_create_from_2d_array_and_free() {
     ASSERT_EQ(matrix_get(m, 0, 1), 2, "Matrix get (0,1)");
     ASSERT_EQ(matrix_get(m, 1, 0), 3, "Matrix get (1,0)");
     ASSERT_EQ(matrix_get(m, 1, 1), 4, "Matrix get (1,1)");
+    int8_t* expected_row_major = {1, 2, 3, 4};
+    int8_t* actual_row_major = matrix_get_data_row_major(m);
+    ASSERT_TRUE(memcmp(expected_row_major, actual_row_major, 4 * sizeof(int8_t)) == 0, "Row major data mismatch");
+    free(actual_row_major);
+    int8_t* expected_col_major = {1, 3, 2, 4};
+    int8_t* actual_col_major = matrix_get_data_column_major(m);
+    ASSERT_TRUE(memcmp(expected_col_major, actual_col_major, 4 * sizeof(int8_t)) == 0, "Column major data mismatch");
+    free(actual_col_major);
     matrix_free(m);
     return 0;
 }
@@ -34,6 +42,14 @@ int test_matrix_create_from_row_major_array_and_free() {
     ASSERT_EQ(matrix_get(m, 0, 1), 2, "Matrix get (0,1)");
     ASSERT_EQ(matrix_get(m, 1, 0), 3, "Matrix get (1,0)");
     ASSERT_EQ(matrix_get(m, 1, 1), 4, "Matrix get (1,1)");
+    int8_t* expected_row_major = {1, 2, 3, 4};
+    int8_t* actual_row_major = matrix_get_data_row_major(m);
+    ASSERT_TRUE(memcmp(expected_row_major, actual_row_major, 4 * sizeof(int8_t)) == 0, "Row major data mismatch");
+    free(actual_row_major);
+    int8_t* expected_col_major = {1, 3, 2, 4};
+    int8_t* actual_col_major = matrix_get_data_column_major(m);
+    ASSERT_TRUE(memcmp(expected_col_major, actual_col_major, 4 * sizeof(int8_t)) == 0, "Column major data mismatch");
+    free(actual_col_major);
     matrix_free(m);
     return 0;
 }
@@ -50,6 +66,14 @@ int test_matrix_create_from_column_major_array_and_free() {
     ASSERT_EQ(matrix_get(m, 0, 1), 2, "Matrix get (0,1)");
     ASSERT_EQ(matrix_get(m, 1, 0), 3, "Matrix get (1,0)");
     ASSERT_EQ(matrix_get(m, 1, 1), 4, "Matrix get (1,1)");
+    int8_t* expected_row_major = {1, 2, 3, 4};
+    int8_t* actual_row_major = matrix_get_data_row_major(m);
+    ASSERT_TRUE(memcmp(expected_row_major, actual_row_major, 4 * sizeof(int8_t)) == 0, "Row major data mismatch");
+    free(actual_row_major);
+    int8_t* expected_col_major = {1, 3, 2, 4};
+    int8_t* actual_col_major = matrix_get_data_column_major(m);
+    ASSERT_TRUE(memcmp(expected_col_major, actual_col_major, 4 * sizeof(int8_t)) == 0, "Column major data mismatch");
+    free(actual_col_major);
     matrix_free(m);
     return 0;
 }

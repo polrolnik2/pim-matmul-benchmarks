@@ -71,6 +71,10 @@ int8_t* matrix_get_row(const Matrix* mat, int r);
  */
 int8_t* matrix_get_col(const Matrix* mat, int c);
 
+int8_t* matrix_get_data_row_major(const Matrix* mat);
+
+int8_t* matrix_get_data_column_major(const Matrix* mat);
+
 /**
  * @brief Create a deep copy of a matrix.
  * @param mat Pointer to Matrix.

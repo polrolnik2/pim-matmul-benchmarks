@@ -106,6 +106,26 @@ int8_t* matrix_get_col(const Matrix* mat, int c) {
     return col;
 }
 
+int8_t* matrix_get_data_row_major(const Matrix* mat) {
+    if (!mat) return NULL;
+    int8_t* data = (int8_t*)malloc(mat->rows * mat->cols * sizeof(int8_t));
+    if (!data) return NULL;
+    for (int r = 0; r < mat->rows; ++r) {
+        memcpy(data + r * mat->cols, matrix_get_row(mat, r), mat->cols * sizeof(int8_t));
+    }
+    return data;
+}
+
+int8_t* matrix_get_data_column_major(const Matrix* mat) {
+    if (!mat) return NULL;
+    int8_t* data = (int8_t*)malloc(mat->rows * mat->cols * sizeof(int8_t));
+    if (!data) return NULL;
+    for (int c = 0; c < mat->cols; ++c) {
+        memcpy(data + c * mat->rows, matrix_get_col(mat, c), mat->rows * sizeof(int8_t));
+    }
+    return data;
+}
+
 Matrix* matrix_clone(const Matrix* mat) {
     if (!mat) return NULL;
     Matrix* copy = (Matrix*)malloc(sizeof(Matrix));
