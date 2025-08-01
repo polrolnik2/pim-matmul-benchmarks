@@ -48,6 +48,7 @@ run-unittests: docker-build
 		". /opt/upmem-2025.1.0-Linux-x86_64/upmem_env.sh simulator && \
 		. /workspace/source.me && \
 		make -C tests run FILE=$$(basename $$t)"; \
-	done
+	done; \
+	python3 scripts/parse_unittest_logs.py
 
 .PHONY: SimplePIM clean build-unittests run-unittests
