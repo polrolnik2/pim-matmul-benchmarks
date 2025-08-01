@@ -15,6 +15,15 @@
 #include "matrix.h"
 #include "pim_matrix_handle.h"
 
+char * pim_id_generate_unique_handle(const char *prefix) {
+    static int counter = 0; // Static to maintain state across calls
+    char *handle = (char *)malloc(64);
+    if (!handle) return NULL;
+    snprintf(handle, 64, "%s_%d", prefix, counter);
+    counter++;
+    return handle;
+}
+
 pim_matrix_handle_t* broadcast_matrix_to_pim(const Matrix* matrix, simplepim_management_t* management) {
     if (!matrix || !management) return NULL;
     pim_matrix_handle_t* handle = (pim_matrix_handle_t*)malloc(sizeof(pim_matrix_handle_t));
@@ -24,9 +33,7 @@ pim_matrix_handle_t* broadcast_matrix_to_pim(const Matrix* matrix, simplepim_man
         memcpy(matrix_data + r * matrix->cols, matrix->data[r], matrix->cols * sizeof(int8_t));
     }
     static int broadcast_matrix_counter = 0;
-    char unique_handle[64];
-    snprintf(unique_handle, sizeof(unique_handle), "broadcasted_matrix_%d", broadcast_matrix_counter++);
-    handle->pim_handle = strdup(unique_handle);
+    handle->pim_handle = strdup(pim_id_generate_unique_handle("broadcasted_matrix"));
     handle->submatrix_rows = matrix->rows;
     handle->submatrix_cols = matrix->cols;
     // Broadcast the matrix data to all PIM units
@@ -40,9 +47,7 @@ pim_matrix_handle_t* scatter_matrix_to_pim(const Matrix* matrix, int16_t submatr
     pim_matrix_handle_t* handle = (pim_matrix_handle_t*)malloc(sizeof(pim_matrix_handle_t));
     if (!handle) return NULL;
     static int scatter_matrix_counter = 0;
-    char unique_handle[64];
-    snprintf(unique_handle, sizeof(unique_handle), "scattered_matrix_%d", scatter_matrix_counter++);
-    handle->pim_handle = strdup(unique_handle);
+    handle->pim_handle = strdup(pim_id_generate_unique_handle("scattered_matrix"));
     handle->submatrix_rows = submatrix_rows;
     handle->submatrix_cols = submatrix_cols;
     int submatrices_by_rows = matrix->rows / submatrix_rows;

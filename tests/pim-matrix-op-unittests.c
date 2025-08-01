@@ -70,8 +70,11 @@ int test_pim_scatter_gather() {
     return 0;
 }
 
-int test_pim_add_matrices() {
-    Matrix* mat1 = matrix_create(2, 2, (int8_t*[]) {
+// Test for mantaining data integrity with broadcasting scattering and gathering with multiple PIM matrices
+int test_pim_broadcast_multiple_scatter_gather() {
+    printf("Running test_pim_broadcast_multiple_scatter_gather...\n");
+    simplepim_management_t* table_management = table_management_init(5);
+    Matrix* mat1 = matrix_create_from_2d_array(2, 2, (int8_t*[]) {
         (int8_t[]){1, 2},
         (int8_t[]){3, 4}
     });
