@@ -14,48 +14,59 @@
 #include "pim_matrix_handle.h"
 
 int test_pim_broadcast_gather() {
-    Matrix* mat = matrix_create(2, 2, (int8_t*[]) {
+    printf("Running test_pim_broadcast_gather...\n");
+    simplepim_management_t* table_management = table_management_init(5);
+    Matrix* mat = matrix_create_from_2d_array(2, 2, (int8_t*[]) {
         (int8_t[]){1, 2},
         (int8_t[]){3, 4}
     });
     ASSERT_TRUE(mat != NULL, "Matrix creation failed");
-    pim_matrix_handle_t* handle = broadcast_matrix_to_pim(mat);
+    pim_matrix_handle_t* handle = broadcast_matrix_to_pim(mat, table_management);
     ASSERT_TRUE(handle != NULL, "Broadcast to PIM failed");
-    Matrix* gathered = gather_matrix_from_pim(handle->pim_handle, mat->rows, mat->cols);
+    Matrix* gathered = gather_matrix_from_pim(handle, mat->rows, mat->cols, table_management);
     ASSERT_TRUE(gathered != NULL, "Gather from PIM failed");
     ASSERT_TRUE(matrix_compare(gathered, mat), "Gathered matrix should match original");
+    matrix_free(mat);
+    matrix_free(gathered);
+    free_pim_matrix_handle(handle, table_management);
     return 0;
 }
 
 int test_pim_broadcast_free() {
-    Matrix* mat = matrix_create(2, 2, (int8_t*[]) {
+    printf("Running test_pim_broadcast_free...\n");
+    simplepim_management_t* table_management = table_management_init(5);
+    Matrix* mat = matrix_create_from_2d_array(2, 2, (int8_t*[]) {
         (int8_t[]){1, 2},
         (int8_t[]){3, 4}
     });
     ASSERT_TRUE(mat != NULL, "Matrix creation failed");
-    pim_matrix_handle_t* handle = broadcast_matrix_to_pim(mat);
+    pim_matrix_handle_t* handle = broadcast_matrix_to_pim(mat, table_management);
     ASSERT_TRUE(handle != NULL, "Broadcast to PIM failed");
-    free_pim_matrix_handle(handle);
-    Matrix* gathered = gather_matrix_from_pim(handle->pim_handle, mat->rows, mat->cols);
+    free_pim_matrix_handle(handle, table_management);
+    Matrix* gathered = gather_matrix_from_pim(handle, mat->rows, mat->cols, table_management);
     ASSERT_TRUE(gathered == NULL, "Gather from PIM should fail after free");
     matrix_free(mat);
     return 0;
 }
 
 int test_pim_scatter_gather() {
-    Matrix* mat = matrix_create(2, 2, (int8_t*[]) {
-        (int8_t[]){1, 2},
-        (int8_t[]){3, 4}
+    printf("Running test_pim_scatter_gather...\n");
+    simplepim_management_t* table_management = table_management_init(5);
+    Matrix* mat = matrix_create_from_2d_array(4, 4, (int8_t*[]) {
+        (int8_t[]){1, 2, 5, 6},
+        (int8_t[]){3, 4, 7, 8},
+        (int8_t[]){9, 10, 13, 14},
+        (int8_t[]){11, 12, 15, 16}
     });
     ASSERT_TRUE(mat != NULL, "Matrix creation failed");
-    pim_matrix_handle_t* handle = scatter_matrix_to_pim(mat, 1, 1);
+    pim_matrix_handle_t* handle = scatter_matrix_to_pim(mat, 2, 2, table_management);
     ASSERT_TRUE(handle != NULL, "Scatter to PIM failed");
-    Matrix* gathered = gather_matrix_from_pim(handle->pim_handle, mat->rows, mat->cols);
+    Matrix* gathered = gather_matrix_from_pim(handle, mat->rows, mat->cols, table_management);
     ASSERT_TRUE(gathered != NULL, "Gather from PIM failed");
     ASSERT_TRUE(matrix_compare(gathered, mat), "Gathered matrix should match original");
     matrix_free(mat);
     matrix_free(gathered);
-    free_pim_matrix_handle(handle);
+    free_pim_matrix_handle(handle, table_management);
     return 0;
 }
 
