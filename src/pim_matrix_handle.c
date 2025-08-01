@@ -23,8 +23,10 @@ pim_matrix_handle_t* broadcast_matrix_to_pim(const Matrix* matrix, simplepim_man
     for (int r = 0; r < matrix->rows; ++r) {
         memcpy(matrix_data + r * matrix->cols, matrix->data[r], matrix->cols * sizeof(int8_t));
     }
-    // Set the PIM handle to a unique identifier (e.g., matrix ID)
-    handle->pim_handle = strdup("broadcasted_matrix");
+    static int broadcast_matrix_counter = 0;
+    char unique_handle[64];
+    snprintf(unique_handle, sizeof(unique_handle), "broadcasted_matrix_%d", broadcast_matrix_counter++);
+    handle->pim_handle = strdup(unique_handle);
     handle->submatrix_rows = matrix->rows;
     handle->submatrix_cols = matrix->cols;
     // Broadcast the matrix data to all PIM units
@@ -37,7 +39,10 @@ pim_matrix_handle_t* scatter_matrix_to_pim(const Matrix* matrix, int16_t submatr
     if (!matrix || !management || submatrix_rows <= 0 || submatrix_cols <= 0) return NULL;
     pim_matrix_handle_t* handle = (pim_matrix_handle_t*)malloc(sizeof(pim_matrix_handle_t));
     if (!handle) return NULL;
-    handle->pim_handle = strdup("scattered_matrix");
+    static int scatter_matrix_counter = 0;
+    char unique_handle[64];
+    snprintf(unique_handle, sizeof(unique_handle), "scattered_matrix_%d", scatter_matrix_counter++);
+    handle->pim_handle = strdup(unique_handle);
     handle->submatrix_rows = submatrix_rows;
     handle->submatrix_cols = submatrix_cols;
     int submatrices_by_rows = matrix->rows / submatrix_rows;
