@@ -148,12 +148,15 @@ int test_pim_multiply_matrices(simplepim_management_t* table_management) {
     ASSERT_TRUE(result_handle != NULL, "Multiply PIM matrices failed");
     Matrix* result = gather_matrix_from_pim(result_handle, mat1->rows, mat1->cols, sizeof(int16_t), table_management);
     ASSERT_TRUE(result != NULL, "Gather from PIM failed");
-    printf("Result matrix:\n%s", matrix_sprint(result, "%u |"));
-    Matrix* expected = matrix_create_from_2d_array(4, 4, (int16_t*[]) {
-        (int16_t[]){250, 260, 270, 280},
-        (int16_t[]){618, 644, 670, 696},
-        (int16_t[]){986, 1028, 1070, 1112},
-        (int16_t[]){1354, 1412, 1470, 1528}
+    Matrix* expected = matrix_create_from_2d_array(6, 6, (int16_t*[]) {
+        (int16_t[]){90, 100, 110, 120, 0, 0, 0, 0},
+        (int16_t[]){202, 228, 254, 280, 0, 0, 0, 0},
+        (int16_t[]){314, 356, 398, 440, 0, 0, 0, 0},
+        (int16_t[]){426, 484, 542, 600, 0, 0, 0, 0},
+        (int16_t[]){0, 0, 0, 0, 0, 0, 0, 0},
+        (int16_t[]){0, 0, 0, 0, 0, 0, 0, 0},
+        (int16_t[]){0, 0, 0, 0, 0, 0, 0, 0},
+        (int16_t[]){0, 0, 0, 0, 0, 0, 0, 0}
     }, sizeof(int16_t));
     ASSERT_TRUE(matrix_compare(result, expected), "Result matrix should match expected");
     matrix_free(mat1);
@@ -207,10 +210,10 @@ int test_multiplying_scattered_matrices(simplepim_management_t* table_management
 int main() {
     int fails = 0;
     simplepim_management_t* table_management = table_management_init(4);
-    // fails += test_pim_broadcast_gather(table_management);
-    // fails += test_pim_broadcast_free(table_management);
-    // fails += test_pim_scatter_gather(table_management);
-    // fails += test_pim_broadcast_multiple_scatter_gather(table_management);
+    fails += test_pim_broadcast_gather(table_management);
+    fails += test_pim_broadcast_free(table_management);
+    fails += test_pim_scatter_gather(table_management);
+    fails += test_pim_broadcast_multiple_scatter_gather(table_management);
     fails += test_multiplying_scattered_matrices(table_management);
     fails += test_pim_multiply_matrices(table_management);
     if (fails == 0) {
