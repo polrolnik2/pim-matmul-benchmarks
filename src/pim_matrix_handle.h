@@ -46,7 +46,7 @@ pim_matrix_handle_t* scatter_matrix_to_pim(const Matrix* matrix, int16_t submatr
  * @param cols Number of columns in the matrix.
  * @return Pointer to a new Matrix object.
  */
-Matrix* gather_matrix_from_pim(pim_matrix_handle_t *handle, int16_t rows, int16_t cols, simplepim_management_t* management);
+Matrix* gather_matrix_from_pim(pim_matrix_handle_t *handle, int16_t rows, int16_t cols, uint32_t element_size, simplepim_management_t* management);
 
 /**
  * @brief Free a PIM matrix handle and associated resources.

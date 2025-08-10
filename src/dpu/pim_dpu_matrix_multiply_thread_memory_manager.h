@@ -61,6 +61,7 @@ static fsb_allocator_t global_matrix2_col_allocators[MAX_MATRIX_COLS];
 MUTEX_INIT(matrix1_mutex);  // Protects matrix1 row fetching
 MUTEX_INIT(matrix2_mutex);  // Protects matrix2 column fetching
 MUTEX_INIT(result_mutex);   // Protects result matrix writes
+MUTEX_INIT(log_mutex);     // Protects debug logging
 
 #define MAX_MATRIX_ROWS 512
 #define MAX_MATRIX_COLS 512
@@ -177,9 +178,6 @@ int pim_dpu_matrix_multiply_thread_memory_manager(__mram_ptr void* inputs1, __mr
         end_element = start_element + elements_per_thread;
     }
     
-    printf("Thread %u: Computing result elements %u to %u (%u elements)\n", 
-           pid, start_element, end_element - 1, end_element - start_element);
-    
     // Process assigned result elements
     for (uint32_t elem_idx = start_element; elem_idx < end_element; elem_idx++) {
         // Convert linear element index to matrix coordinates
@@ -203,12 +201,8 @@ int pim_dpu_matrix_multiply_thread_memory_manager(__mram_ptr void* inputs1, __mr
             
             // Fetch row from MRAM (aligned transfer following SimplePIM pattern)
             uint32_t mram_offset = result_row * matrix1_cols * input_type1;
-            printf("Thread %u: Reading matrix1 row %u from MRAM offset %u, size %u\n",
-                   pid, result_row, mram_offset, aligned_row_size);
             mram_read((__mram_ptr void*)((char*)inputs1 + mram_offset), global_matrix1_rows[result_row], aligned_row_size);
             global_matrix1_row_fetched[result_row] = true;
-            
-            printf("Thread %u: Fetched matrix1 row %u (%u bytes)\n", pid, result_row, row_size);
         }
         mutex_unlock(matrix1_mutex);
         
@@ -228,22 +222,11 @@ int pim_dpu_matrix_multiply_thread_memory_manager(__mram_ptr void* inputs1, __mr
             // Fetch column from MRAM (optimized bulk transfer)
             // Since matrix2 is stored row-major, we need to gather column elements
             // This is less efficient but necessary for column access
+            // For column-major ordering, we can copy the entire column in one go
             uint8_t* temp_col_buffer = global_matrix2_cols[result_col];
-            for (uint32_t row = 0; row < matrix2_rows; row++) {
-                uint32_t mram_row_offset = row * matrix2_cols * input_type2;
-                uint32_t mram_element_offset = mram_row_offset + (result_col * input_type2);
-                
-                // Read single element (aligned to 8 bytes minimum)
-                uint32_t read_size = (input_type2 < 8) ? 8 : input_type2;
-                __dma_aligned uint8_t temp_buffer[8];
-                mram_read((__mram_ptr void*)((char*)inputs2 + mram_element_offset), temp_buffer, read_size);
-                
-                // Copy the actual element to our column buffer
-                temp_col_buffer[row] = temp_buffer[0];
-            }
+            uint32_t mram_col_offset = result_col * matrix2_rows * input_type2;
+            mram_read((__mram_ptr void*)((char*)inputs2 + mram_col_offset), global_matrix2_cols[result_col], col_size);
             global_matrix2_col_fetched[result_col] = true;
-            
-            printf("Thread %u: Fetched matrix2 column %u (%u bytes)\n", pid, result_col, col_size);
         }
         mutex_unlock(matrix2_mutex);
         
@@ -255,16 +238,13 @@ int pim_dpu_matrix_multiply_thread_memory_manager(__mram_ptr void* inputs1, __mr
         for (uint32_t k = 0; k < matrix1_cols; k++) {
             uint8_t a_val = row_data[k];
             uint8_t b_val = col_data[k];
-            dot_product += (uint16_t)a_val * (uint16_t)b_val;
+            dot_product += a_val * b_val;
         }
         
         // Store result in WRAM result matrix
         mutex_lock(result_mutex);
         global_result_matrix[elem_idx] = dot_product;
         mutex_unlock(result_mutex);
-        
-        printf("Thread %u: Computed result[%u][%u] = %u (element %u)\n", 
-               pid, result_row, result_col, dot_product, elem_idx);
     }
     
     // Wait for all threads to complete their calculations

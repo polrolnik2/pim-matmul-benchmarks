@@ -26,15 +26,15 @@ pim_matrix_handle_t* broadcast_matrix_to_pim(const Matrix* matrix, simplepim_man
     if (!matrix || !management) return NULL;
     pim_matrix_handle_t* handle = (pim_matrix_handle_t*)malloc(sizeof(pim_matrix_handle_t));
     if (!handle) return NULL;
-    uint8_t* matrix_data = malloc_broadcast_aligned(1, matrix->rows * matrix->cols * sizeof(int8_t), management);
+    uint8_t* matrix_data = malloc_broadcast_aligned(1, matrix->rows * matrix->cols * matrix->element_size, management);
     for (int r = 0; r < matrix->rows; ++r) {
-        memcpy(matrix_data + r * matrix->cols, matrix->data[r], matrix->cols * sizeof(int8_t));
+        memcpy(matrix_data + r * matrix->cols * matrix->element_size, matrix->data[r], matrix->cols * matrix->element_size);
     }
     handle->pim_handle = strdup(pim_id_generate_unique_handle("broadcasted_matrix"));
     handle->submatrix_rows = matrix->rows;
     handle->submatrix_cols = matrix->cols;
     // Broadcast the matrix data to all PIM units
-    simplepim_broadcast(handle->pim_handle, matrix_data, 1, handle->submatrix_rows * handle->submatrix_cols * sizeof(int8_t), management);
+    simplepim_broadcast(handle->pim_handle, matrix_data, 1, handle->submatrix_rows * handle->submatrix_cols * matrix->element_size, management);
     free(matrix_data);
     return handle;
 }
@@ -69,7 +69,7 @@ pim_matrix_handle_t* scatter_matrix_to_pim(const Matrix* matrix, int16_t submatr
         }
     }
     free(submatrices_row);
-    int8_t* scattered_data = malloc_scatter_aligned(1, matrix->rows * matrix->cols * sizeof(int8_t), management);
+    int8_t* scattered_data = malloc_scatter_aligned(1, matrix->rows * matrix->cols * matrix->element_size, management);
     if (!scattered_data) {
         for (int i = 0; i < submatrices_by_rows; ++i) {
             for (int j = 0; j < submatrices_by_cols; ++j) {
@@ -83,22 +83,24 @@ pim_matrix_handle_t* scatter_matrix_to_pim(const Matrix* matrix, int16_t submatr
     }
     for (int i = 0; i < submatrices_by_rows; ++i) {
         for (int j = 0; j < submatrices_by_cols; ++j) {
-            memcpy(scattered_data + (i * submatrices_by_cols + j) * submatrix_rows * submatrix_cols * sizeof(int8_t),
-                   matrix_get_data_row_major(submatrices[i][j]), submatrix_rows * submatrix_cols * sizeof(int8_t));
+            void* submatrix_data = matrix_get_data_row_major(submatrices[i][j]);
+            memcpy(scattered_data + (i * submatrices_by_cols + j) * submatrix_rows * submatrix_cols * matrix->element_size,
+                   submatrix_data, submatrix_rows * submatrix_cols * matrix->element_size);
+            free(submatrix_data);
         }
     }
-    simplepim_scatter(handle->pim_handle, scattered_data, submatrices_by_cols * submatrices_by_rows, submatrix_cols * submatrix_rows * sizeof(int8_t), management);
+    simplepim_scatter(handle->pim_handle, scattered_data, submatrices_by_cols * submatrices_by_rows, submatrix_cols * submatrix_rows * matrix->element_size, management);
     return handle;
 }
 
-Matrix* gather_matrix_from_pim(pim_matrix_handle_t *handle, int16_t rows, int16_t cols, simplepim_management_t* management) {
-    if (!handle || rows <= 0 || cols <= 0 || !management) return NULL;
+Matrix* gather_matrix_from_pim(pim_matrix_handle_t *handle, int16_t rows, int16_t cols, uint32_t element_size, simplepim_management_t* management) {
+    if (!handle || rows <= 0 || cols <= 0 || element_size == 0 || !management) return NULL;
     int submatrix_rows = handle->submatrix_rows;
     int submatrix_cols = handle->submatrix_cols;
     int submatrices_by_rows = rows / submatrix_rows;
     int submatrices_by_cols = cols / submatrix_cols;
     // Gather the matrix data from PIM
-    int8_t* gathered_data = simplepim_gather(handle->pim_handle, management);
+    void * gathered_data = simplepim_gather(handle->pim_handle, management);\
     if (!gathered_data) {
         return NULL;
     }
@@ -107,7 +109,7 @@ Matrix* gather_matrix_from_pim(pim_matrix_handle_t *handle, int16_t rows, int16_
         Matrix** row_submatrices = malloc(submatrices_by_cols * sizeof(Matrix*));
         for (int j = 0; j < submatrices_by_cols; ++j) {
             row_submatrices[j] = matrix_create_from_row_major_array(submatrix_rows, submatrix_cols,
-                gathered_data + (i * submatrices_by_cols + j) * submatrix_rows * submatrix_cols * sizeof(int8_t));
+                gathered_data + (i * submatrices_by_cols + j) * submatrix_rows * submatrix_cols * element_size, element_size);
         }
         submatrices[i] = matrix_join_by_cols(row_submatrices, submatrices_by_cols);
         free(row_submatrices);
@@ -251,21 +253,22 @@ pim_matrix_handle_t* multiply_pim_matrices(const pim_matrix_handle_t* handle1, c
     result_table->name = strdup(result_handle->pim_handle);
     result_table->start = result_offset;
     result_table->end = result_offset + result_size_bytes;
-    result_table->len = result_elements;
-    result_table->table_type_size = sizeof(uint16_t);
+    result_table->len = 1;
+    result_table->table_type_size =  result_elements * sizeof(uint16_t);
     result_table->is_virtual_zipped = 0;
     
     // Calculate lens for each DPU (uniform distribution)
     uint32_t* lens = malloc(num_dpus * sizeof(uint32_t));
     uint32_t elements_per_dpu = (result_elements + num_dpus - 1) / num_dpus;
     for (int j = 0; j < num_dpus; j++) {
-        if ((j + 1) * elements_per_dpu <= result_elements) {
-            lens[j] = elements_per_dpu;
-        } else if (j * elements_per_dpu < result_elements) {
-            lens[j] = result_elements - j * elements_per_dpu;
-        } else {
-            lens[j] = 0;
-        }
+        // if ((j + 1) * elements_per_dpu <= result_elements) {
+        //     lens[j] = elements_per_dpu;
+        // } else if (j * elements_per_dpu < result_elements) {
+        //     lens[j] = result_elements - j * elements_per_dpu;
+        // } else {
+        //     lens[j] = 0;
+        // }
+        lens[j] = 1;
     }
     result_table->lens_each_dpu = lens;
 
@@ -280,40 +283,4 @@ pim_matrix_handle_t* multiply_pim_matrices(const pim_matrix_handle_t* handle1, c
     free(input_args);
     
     return result_handle;
-}
-
-pim_matrix_handle_t* add_pim_matrices(const pim_matrix_handle_t* handle1, const pim_matrix_handle_t* handle2, simplepim_management_t* management) {
-    // if (!handle1 || !handle2 || !management) return NULL;
-    
-    // // Create result handle
-    // pim_matrix_handle_t* result_handle = (pim_matrix_handle_t*)malloc(sizeof(pim_matrix_handle_t));
-    // if (!result_handle) return NULL;
-    
-    // result_handle->pim_handle = strdup(pim_id_generate_unique_handle("added_matrix"));
-    // result_handle->submatrix_rows = handle1->submatrix_rows;
-    // result_handle->submatrix_cols = handle1->submatrix_cols;
-    
-    // // Use SimplePIM map interface to apply matrix addition kernel
-    // handle_t* add_kernel = create_handle("matrix_add_dpu", MAP);
-    // if (!add_kernel) {
-    //     free(result_handle->pim_handle);
-    //     free(result_handle);
-    //     return NULL;
-    // }
-    
-    // // Create temporary table for the operation
-    // char temp_table_name[64];
-    // snprintf(temp_table_name, sizeof(temp_table_name), "temp_add_%s_%s", 
-    //          handle1->pim_handle, handle2->pim_handle);
-    
-    // // Use zip operation to combine the two matrices for the addition kernel
-    // table_zip(handle1->pim_handle, handle2->pim_handle, temp_table_name, add_kernel, management);
-    
-    // // Apply the addition map operation
-    // table_map(temp_table_name, result_handle->pim_handle, sizeof(int8_t), add_kernel, management, 0);
-    
-    // // Clean up temporary table
-    // free_table(temp_table_name, management);
-    
-    // return result_handle;
 }
