@@ -13,6 +13,31 @@
 #include "matrix.h"
 #include "pim_matrix_handle.h"
 
+uint32_t calculate_pad_rows(int16_t rows, int16_t element_size) {
+    uint32_t col_size = rows * element_size;
+    uint32_t pad = (8 - (col_size % 8)) % 8;
+    return pad / element_size;
+}
+
+uint32_t calculate_pad_cols(int16_t cols, int16_t element_size) {
+    uint32_t row_size = cols * element_size;
+    uint32_t pad = (8 - (row_size % 8)) % 8;
+    return pad / element_size;
+}
+
+Matrix * matrix_align(const Matrix *mat) {
+    if (!mat) return NULL;
+    int16_t pad_rows = calculate_pad_rows(mat->rows, mat->element_size);
+    int16_t pad_cols = calculate_pad_cols(mat->cols, mat->element_size);
+    Matrix *aligned = matrix_add_cols(mat, pad_cols, NULL);
+    aligned = matrix_add_rows(aligned, pad_rows, NULL);
+    if (!aligned) {
+        matrix_free(aligned);
+        return NULL;
+    }
+    return aligned;
+}
+
 char * pim_id_generate_unique_handle(const char *prefix) {
     static int counter = 0; // Static to maintain state across calls
     char *handle = (char *)malloc(64);
@@ -26,15 +51,20 @@ pim_matrix_handle_t* broadcast_matrix_to_pim(const Matrix* matrix, simplepim_man
     if (!matrix || !management) return NULL;
     pim_matrix_handle_t* handle = (pim_matrix_handle_t*)malloc(sizeof(pim_matrix_handle_t));
     if (!handle) return NULL;
-    uint8_t* matrix_data = malloc_broadcast_aligned(1, matrix->rows * matrix->cols * matrix->element_size, management);
-    for (int r = 0; r < matrix->rows; ++r) {
-        memcpy(matrix_data + r * matrix->cols * matrix->element_size, matrix->data[r], matrix->cols * matrix->element_size);
-    }
     handle->pim_handle = strdup(pim_id_generate_unique_handle("broadcasted_matrix"));
     handle->submatrix_rows = matrix->rows;
     handle->submatrix_cols = matrix->cols;
+    Matrix *aligned_matrix = matrix_align(matrix);
+    if (!aligned_matrix) {
+        free(handle);
+        return NULL;
+    }
+    uint8_t* matrix_data = malloc_broadcast_aligned(1, aligned_matrix->rows * aligned_matrix->cols * aligned_matrix->element_size, management);
+    for (int r = 0; r < aligned_matrix->rows; ++r) {
+        memcpy(matrix_data + r * aligned_matrix->cols * aligned_matrix->element_size, aligned_matrix->data[r], aligned_matrix->cols * aligned_matrix->element_size);
+    }
     // Broadcast the matrix data to all PIM units
-    simplepim_broadcast(handle->pim_handle, matrix_data, 1, handle->submatrix_rows * handle->submatrix_cols * matrix->element_size, management);
+    simplepim_broadcast(handle->pim_handle, matrix_data, 1, aligned_matrix->rows * aligned_matrix->cols * aligned_matrix->element_size, management);
     free(matrix_data);
     return handle;
 }
@@ -43,7 +73,6 @@ pim_matrix_handle_t* scatter_matrix_to_pim(const Matrix* matrix, int16_t submatr
     if (!matrix || !management || submatrix_rows <= 0 || submatrix_cols <= 0) return NULL;
     pim_matrix_handle_t* handle = (pim_matrix_handle_t*)malloc(sizeof(pim_matrix_handle_t));
     if (!handle) return NULL;
-    static int scatter_matrix_counter = 0;
     handle->pim_handle = strdup(pim_id_generate_unique_handle("scattered_matrix"));
     handle->submatrix_rows = submatrix_rows;
     handle->submatrix_cols = submatrix_cols;
@@ -69,7 +98,9 @@ pim_matrix_handle_t* scatter_matrix_to_pim(const Matrix* matrix, int16_t submatr
         }
     }
     free(submatrices_row);
-    int8_t* scattered_data = malloc_scatter_aligned(1, matrix->rows * matrix->cols * matrix->element_size, management);
+    uint32_t num_submatrices = submatrices_by_rows * submatrices_by_cols;
+    uint32_t submatrix_size = (calculate_pad_cols(submatrix_cols, matrix->element_size) + handle->submatrix_cols) * (calculate_pad_rows(submatrix_rows, matrix->element_size) + handle->submatrix_rows) * matrix->element_size;
+    int8_t* scattered_data = malloc_scatter_aligned(1, num_submatrices * submatrix_size, management);
     if (!scattered_data) {
         for (int i = 0; i < submatrices_by_rows; ++i) {
             for (int j = 0; j < submatrices_by_cols; ++j) {
@@ -83,13 +114,14 @@ pim_matrix_handle_t* scatter_matrix_to_pim(const Matrix* matrix, int16_t submatr
     }
     for (int i = 0; i < submatrices_by_rows; ++i) {
         for (int j = 0; j < submatrices_by_cols; ++j) {
-            void* submatrix_data = matrix_get_data_row_major(submatrices[i][j]);
-            memcpy(scattered_data + (i * submatrices_by_cols + j) * submatrix_rows * submatrix_cols * matrix->element_size,
-                   submatrix_data, submatrix_rows * submatrix_cols * matrix->element_size);
+            Matrix * aligned_submatrix = matrix_align(submatrices[i][j]);
+            void* submatrix_data = matrix_get_data_row_major(aligned_submatrix);
+            memcpy(scattered_data + (i * submatrices_by_cols + j) * submatrix_size,
+                   submatrix_data, submatrix_size);
             free(submatrix_data);
         }
     }
-    simplepim_scatter(handle->pim_handle, scattered_data, submatrices_by_cols * submatrices_by_rows, submatrix_cols * submatrix_rows * matrix->element_size, management);
+    simplepim_scatter(handle->pim_handle, scattered_data, num_submatrices, submatrix_size, management);
     return handle;
 }
 
@@ -108,8 +140,11 @@ Matrix* gather_matrix_from_pim(pim_matrix_handle_t *handle, int16_t rows, int16_
     for (int i = 0; i < submatrices_by_rows; ++i) {
         Matrix** row_submatrices = malloc(submatrices_by_cols * sizeof(Matrix*));
         for (int j = 0; j < submatrices_by_cols; ++j) {
-            row_submatrices[j] = matrix_create_from_row_major_array(submatrix_rows, submatrix_cols,
-                gathered_data + (i * submatrices_by_cols + j) * submatrix_rows * submatrix_cols * element_size, element_size);
+            uint32_t aligned_cols = calculate_pad_cols(submatrix_cols, element_size) + handle->submatrix_cols;
+            uint32_t aligned_rows = calculate_pad_rows(submatrix_rows, element_size) + handle->submatrix_rows;
+            row_submatrices[j] = matrix_create_from_row_major_array(aligned_rows, aligned_cols,
+                gathered_data + (i * submatrices_by_cols + j) * aligned_rows * aligned_cols * element_size, element_size);
+            row_submatrices[j] = matrix_extract_submatrix(row_submatrices[j], submatrix_rows, submatrix_cols);
         }
         submatrices[i] = matrix_join_by_cols(row_submatrices, submatrices_by_cols);
         free(row_submatrices);
@@ -218,12 +253,12 @@ pim_matrix_handle_t* multiply_pim_matrices(const pim_matrix_handle_t* handle1, c
         input_args[i].matrix1_start_offset = table1->start;
         input_args[i].matrix2_start_offset = table2->start;
         input_args[i].result_start_offset = result_offset;
-        input_args[i].matrix1_rows = handle1->submatrix_rows;
-        input_args[i].matrix1_cols = handle1->submatrix_cols;
-        input_args[i].matrix2_rows = handle2->submatrix_rows;
-        input_args[i].matrix2_cols = handle2->submatrix_cols;
-        input_args[i].result_rows = handle1->submatrix_rows;
-        input_args[i].result_cols = handle2->submatrix_cols;
+        input_args[i].matrix1_rows = calculate_pad_rows(handle1->submatrix_rows, sizeof(int8_t)) + handle1->submatrix_rows;
+        input_args[i].matrix1_cols = calculate_pad_cols(handle1->submatrix_cols, sizeof(int8_t)) + handle1->submatrix_cols;
+        input_args[i].matrix2_rows = calculate_pad_rows(handle2->submatrix_rows, sizeof(int8_t)) + handle2->submatrix_rows;
+        input_args[i].matrix2_cols = calculate_pad_cols(handle2->submatrix_cols, sizeof(int8_t)) + handle2->submatrix_cols;
+        input_args[i].result_rows = calculate_pad_rows(handle1->submatrix_rows, sizeof(uint16_t)) + handle1->submatrix_rows;
+        input_args[i].result_cols = calculate_pad_cols(handle2->submatrix_cols, sizeof(uint16_t)) + handle2->submatrix_cols;
         input_args[i].matrix1_type_size = sizeof(int8_t);
         input_args[i].matrix2_type_size = sizeof(int8_t);
         input_args[i].result_type_size = sizeof(uint16_t);

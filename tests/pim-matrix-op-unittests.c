@@ -118,28 +118,20 @@ int test_pim_broadcast_multiple_scatter_gather(simplepim_management_t* table_man
 }
 
 int test_pim_multiply_matrices(simplepim_management_t* table_management) {
-    int8_t mat1_row0[] = {1, 2, 3, 4, 0, 0, 0, 0};
-    int8_t mat1_row1[] = {5, 6, 7, 8, 0, 0, 0, 0};
-    int8_t mat1_row2[] = {9, 10, 11, 12, 0, 0, 0, 0};
-    int8_t mat1_row3[] = {13, 14, 15, 16, 0, 0, 0, 0};
-    int8_t mat1_row4[] = {0, 0, 0, 0, 0, 0, 0, 0};
-    int8_t mat1_row5[] = {0, 0, 0, 0, 0, 0, 0, 0};
-    int8_t mat1_row6[] = {0, 0, 0, 0, 0, 0, 0, 0};
-    int8_t mat1_row7[] = {0, 0, 0, 0, 0, 0, 0, 0};
-    int8_t* mat1_data[] = {mat1_row0, mat1_row1, mat1_row2, mat1_row3, mat1_row4, mat1_row5, mat1_row6, mat1_row7};
-    Matrix* mat1 = matrix_create_from_2d_array(8, 8, (void**)mat1_data, sizeof(int8_t));
+    int8_t mat1_row0[] = {1, 2, 3, 4};
+    int8_t mat1_row1[] = {5, 6, 7, 8};
+    int8_t mat1_row2[] = {9, 10, 11, 12};
+    int8_t mat1_row3[] = {13, 14, 15, 16};
+    int8_t* mat1_data[] = {mat1_row0, mat1_row1, mat1_row2, mat1_row3};
+    Matrix* mat1 = matrix_create_from_2d_array(4, 4, (void**)mat1_data, sizeof(int8_t));
 
     // Transpose mat2 before multiplication
-    int8_t mat2_row0[] = {1, 5, 9, 13, 0, 0, 0, 0};
-    int8_t mat2_row1[] = {2, 6, 10, 14, 0, 0, 0, 0};
-    int8_t mat2_row2[] = {3, 7, 11, 15, 0, 0, 0, 0};
-    int8_t mat2_row3[] = {4, 8, 12, 16, 0, 0, 0, 0};
-    int8_t mat2_row4[] = {0, 0, 0, 0, 0, 0, 0, 0};
-    int8_t mat2_row5[] = {0, 0, 0, 0, 0, 0, 0, 0};
-    int8_t mat2_row6[] = {0, 0, 0, 0, 0, 0, 0, 0};
-    int8_t mat2_row7[] = {0, 0, 0, 0, 0, 0, 0, 0};
-    int8_t* mat2_data[] = {mat2_row0, mat2_row1, mat2_row2, mat2_row3, mat2_row4, mat2_row5, mat2_row6, mat2_row7};
-    Matrix* mat2 = matrix_create_from_2d_array(8, 8, (void**)mat2_data, sizeof(int8_t));
+    int8_t mat2_row0[] = {1, 5, 9, 13};
+    int8_t mat2_row1[] = {2, 6, 10, 14};
+    int8_t mat2_row2[] = {3, 7, 11, 15};
+    int8_t mat2_row3[] = {4, 8, 12, 16};
+    int8_t* mat2_data[] = {mat2_row0, mat2_row1, mat2_row2, mat2_row3};
+    Matrix* mat2 = matrix_create_from_2d_array(4, 4, (void**)mat2_data, sizeof(int8_t));
     ASSERT_TRUE(mat1 != NULL && mat2 != NULL, "Matrix creation failed");
     pim_matrix_handle_t* handle1 = broadcast_matrix_to_pim(mat1, table_management);
     pim_matrix_handle_t* handle2 = broadcast_matrix_to_pim(mat2, table_management);
@@ -148,15 +140,11 @@ int test_pim_multiply_matrices(simplepim_management_t* table_management) {
     ASSERT_TRUE(result_handle != NULL, "Multiply PIM matrices failed");
     Matrix* result = gather_matrix_from_pim(result_handle, mat1->rows, mat1->cols, sizeof(int16_t), table_management);
     ASSERT_TRUE(result != NULL, "Gather from PIM failed");
-    Matrix* expected = matrix_create_from_2d_array(6, 6, (int16_t*[]) {
-        (int16_t[]){90, 100, 110, 120, 0, 0, 0, 0},
-        (int16_t[]){202, 228, 254, 280, 0, 0, 0, 0},
-        (int16_t[]){314, 356, 398, 440, 0, 0, 0, 0},
-        (int16_t[]){426, 484, 542, 600, 0, 0, 0, 0},
-        (int16_t[]){0, 0, 0, 0, 0, 0, 0, 0},
-        (int16_t[]){0, 0, 0, 0, 0, 0, 0, 0},
-        (int16_t[]){0, 0, 0, 0, 0, 0, 0, 0},
-        (int16_t[]){0, 0, 0, 0, 0, 0, 0, 0}
+    Matrix* expected = matrix_create_from_2d_array(4, 4, (int16_t*[]) {
+        (int16_t[]){90, 100, 110, 120},
+        (int16_t[]){202, 228, 254, 280},
+        (int16_t[]){314, 356, 398, 440},
+        (int16_t[]){426, 484, 542, 600},
     }, sizeof(int16_t));
     ASSERT_TRUE(matrix_compare(result, expected), "Result matrix should match expected");
     matrix_free(mat1);
