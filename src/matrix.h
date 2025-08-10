@@ -173,6 +173,24 @@ Matrix ** matrix_split_by_cols(const Matrix* mat, int num_submatrices);
  */
 Matrix * matrix_join_by_cols(Matrix **submatrices, int num_submatrices);
 
+/**
+ * @brief Add rows filled with a constant value to the end of a matrix.
+ * @param mat Pointer to Matrix to extend.
+ * @param num_rows Number of rows to add.
+ * @param fill_value Pointer to the constant value to fill new rows with (defaults to 0 if NULL).
+ * @return Pointer to new Matrix with added rows (caller must free), or NULL on failure.
+ */
+Matrix* matrix_add_rows(const Matrix* mat, int16_t num_rows, const void* fill_value);
+
+/**
+ * @brief Add columns filled with a constant value to the end of a matrix.
+ * @param mat Pointer to Matrix to extend.
+ * @param num_cols Number of columns to add.
+ * @param fill_value Pointer to the constant value to fill new columns with (defaults to 0 if NULL).
+ * @return Pointer to new Matrix with added columns (caller must free), or NULL on failure.
+ */
+Matrix* matrix_add_cols(const Matrix* mat, int16_t num_cols, const void* fill_value);
+
 // Type-safe helper macros for common data types
 #define MATRIX_CREATE_INT8(rows, cols, data) matrix_create_from_2d_array(rows, cols, (void**)data, sizeof(int8_t))
 #define MATRIX_CREATE_INT16(rows, cols, data) matrix_create_from_2d_array(rows, cols, (void**)data, sizeof(int16_t))

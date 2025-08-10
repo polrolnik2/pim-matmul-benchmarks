@@ -286,14 +286,14 @@ Matrix** matrix_split_by_rows(const Matrix* mat, int num_submatrices) {
         int start_row = i * rows_per_submatrix;
         int end_row = (i == num_submatrices - 1) ? mat->rows : start_row + rows_per_submatrix;
         int sub_rows = end_row - start_row;
-        int8_t **sub_data = (int8_t**)malloc(sub_rows * sizeof(int8_t*));
+        void **sub_data = (void**)malloc(sub_rows * sizeof(void*));
         if (!sub_data) {
             for (int j = 0; j < i; ++j) matrix_free(submatrices[j]);
             free(submatrices);
             return NULL;
         }
         for (int r = 0; r < sub_rows; ++r) {
-            sub_data[r] = (int8_t*)malloc(mat->cols * sizeof(int8_t));
+            sub_data[r] = malloc(mat->cols * mat->element_size);
             if (!sub_data[r]) {
                 for (int j = 0; j < r; ++j) free(sub_data[j]);
                 free(sub_data);
@@ -301,9 +301,9 @@ Matrix** matrix_split_by_rows(const Matrix* mat, int num_submatrices) {
                 free(submatrices);
                 return NULL;
             }
-            memcpy(sub_data[r], matrix_get_row(mat, start_row + r), mat->cols * sizeof(int8_t));
+            memcpy(sub_data[r], matrix_get_row(mat, start_row + r), mat->cols * mat->element_size);
         }
-        submatrices[i] = matrix_create_from_2d_array(sub_rows, mat->cols, (void**)sub_data, mat->element_size);
+        submatrices[i] = matrix_create_from_2d_array(sub_rows, mat->cols, sub_data, mat->element_size);
         if (!submatrices[i]) {
             for (int j = 0; j < i; ++j) matrix_free(submatrices[j]);
             free(submatrices);
@@ -322,16 +322,25 @@ Matrix** matrix_split_by_cols(const Matrix* mat, int num_submatrices) {
         int start_col = i * cols_per_submatrix;
         int end_col = (i == num_submatrices - 1) ? mat->cols : start_col + cols_per_submatrix;
         int sub_cols = end_col - start_col;
-        int8_t * sub_data_column_major = (int8_t*)malloc(mat->rows * sub_cols * sizeof(int8_t));
+        void * sub_data_column_major = malloc(mat->rows * sub_cols * mat->element_size);
         if (!sub_data_column_major) {
             for (int j = 0; j < i; ++j) matrix_free(submatrices[j]);
             free(submatrices);
             return NULL;
         }
         for (int c = 0; c < sub_cols; ++c) {
-            memcpy(sub_data_column_major + c * mat->rows, matrix_get_col(mat, start_col + c), mat->rows * sizeof(int8_t));
+            void* col_data = matrix_get_col(mat, start_col + c);
+            if (!col_data) {
+                free(sub_data_column_major);
+                for (int j = 0; j < i; ++j) matrix_free(submatrices[j]);
+                free(submatrices);
+                return NULL;
+            }
+            memcpy((char*)sub_data_column_major + c * mat->rows * mat->element_size, col_data, mat->rows * mat->element_size);
+            free(col_data);
         }
         submatrices[i] = matrix_create_from_column_major_array(mat->rows, sub_cols, sub_data_column_major, mat->element_size);
+        free(sub_data_column_major);
         if (!submatrices[i]) {
             for (int j = 0; j < i; ++j) matrix_free(submatrices[j]);
             free(submatrices);
@@ -358,7 +367,7 @@ Matrix* matrix_join_by_rows(Matrix** submatrices, int num_submatrices) {
     }
 
     // Create temporary 2D array for matrix data
-    int8_t **temp_data = (int8_t**)malloc(total_rows * sizeof(int8_t*));
+    void **temp_data = (void**)malloc(total_rows * sizeof(void*));
     if (!temp_data) {
         for (int i = 0; i < num_submatrices; ++i) matrix_free(submatrices[i]);
         free(submatrices);
@@ -367,7 +376,7 @@ Matrix* matrix_join_by_rows(Matrix** submatrices, int num_submatrices) {
     int current_row = 0;
     for (int i = 0; i < num_submatrices; ++i) {
         for (int r = 0; r < submatrices[i]->rows; ++r) {
-            temp_data[current_row] = (int8_t*)malloc(cols * sizeof(int8_t));
+            temp_data[current_row] = malloc(cols * submatrices[i]->element_size);
             if (!temp_data[current_row]) {
                 for (int j = 0; j < current_row; ++j) free(temp_data[j]);
                 free(temp_data);
@@ -375,13 +384,13 @@ Matrix* matrix_join_by_rows(Matrix** submatrices, int num_submatrices) {
                 free(submatrices);
                 return NULL;
             }
-            memcpy(temp_data[current_row], submatrices[i]->data[r], cols * sizeof(int8_t));
+            memcpy(temp_data[current_row], submatrices[i]->data[r], cols * submatrices[i]->element_size);
             current_row++;
         }
     }
 
     // Create matrix from temporary data
-    Matrix* mat = matrix_create_from_2d_array(total_rows, cols, (void**)temp_data, submatrices[0]->element_size);
+    Matrix* mat = matrix_create_from_2d_array(total_rows, cols, temp_data, submatrices[0]->element_size);
     free(temp_data);
     return mat;
 }
@@ -403,7 +412,7 @@ Matrix* matrix_join_by_cols(Matrix** submatrices, int num_submatrices) {
     }
 
     // Create temporary 2D array for matrix data
-    int8_t *temp_data_column_major = (int8_t*)malloc(rows * total_cols * sizeof(int8_t));
+    void *temp_data_column_major = malloc(rows * total_cols * submatrices[0]->element_size);
     if (!temp_data_column_major) {
         for (int i = 0; i < num_submatrices; ++i) matrix_free(submatrices[i]);
         free(submatrices);
@@ -412,7 +421,15 @@ Matrix* matrix_join_by_cols(Matrix** submatrices, int num_submatrices) {
     int current_col = 0;
     for (int i = 0; i < num_submatrices; ++i) {
         for (int c = 0; c < submatrices[i]->cols; ++c) {
-            memcpy(temp_data_column_major + current_col * rows, matrix_get_col(submatrices[i], c), rows * sizeof(int8_t));
+            void* col_data = matrix_get_col(submatrices[i], c);
+            if (!col_data) {
+                free(temp_data_column_major);
+                for (int j = 0; j < num_submatrices; ++j) matrix_free(submatrices[j]);
+                free(submatrices);
+                return NULL;
+            }
+            memcpy((char*)temp_data_column_major + current_col * rows * submatrices[0]->element_size, col_data, rows * submatrices[0]->element_size);
+            free(col_data);
             current_col++;
         }
     }
@@ -421,4 +438,121 @@ Matrix* matrix_join_by_cols(Matrix** submatrices, int num_submatrices) {
     Matrix* mat = matrix_create_from_column_major_array(rows, total_cols, temp_data_column_major, submatrices[0]->element_size);
     free(temp_data_column_major);
     return mat;
+}
+
+Matrix* matrix_add_rows(const Matrix* mat, int16_t num_rows, const void* fill_value) {
+    if (!mat || num_rows <= 0) return NULL;
+    
+    int16_t new_rows = mat->rows + num_rows;
+    int16_t cols = mat->cols;
+    
+    // Create new matrix data structure
+    void** new_data = (void**)malloc(new_rows * sizeof(void*));
+    if (!new_data) return NULL;
+    
+    // Copy existing rows
+    for (int r = 0; r < mat->rows; ++r) {
+        new_data[r] = malloc(cols * mat->element_size);
+        if (!new_data[r]) {
+            for (int i = 0; i < r; ++i) free(new_data[i]);
+            free(new_data);
+            return NULL;
+        }
+        memcpy(new_data[r], mat->data[r], cols * mat->element_size);
+    }
+    
+    // Create fill pattern (default to zero)
+    void* fill_pattern = malloc(mat->element_size);
+    if (!fill_pattern) {
+        for (int i = 0; i < mat->rows; ++i) free(new_data[i]);
+        free(new_data);
+        return NULL;
+    }
+    
+    if (fill_value) {
+        memcpy(fill_pattern, fill_value, mat->element_size);
+    } else {
+        memset(fill_pattern, 0, mat->element_size);
+    }
+    
+    // Add new rows filled with the pattern
+    for (int r = mat->rows; r < new_rows; ++r) {
+        new_data[r] = malloc(cols * mat->element_size);
+        if (!new_data[r]) {
+            for (int i = 0; i < r; ++i) free(new_data[i]);
+            free(new_data);
+            free(fill_pattern);
+            return NULL;
+        }
+        
+        // Fill the row with the fill pattern
+        for (int c = 0; c < cols; ++c) {
+            memcpy((char*)new_data[r] + c * mat->element_size, fill_pattern, mat->element_size);
+        }
+    }
+    
+    free(fill_pattern);
+    
+    // Create the new matrix
+    Matrix* result = matrix_create_from_2d_array(new_rows, cols, new_data, mat->element_size);
+    
+    // Clean up temporary data
+    for (int i = 0; i < new_rows; ++i) free(new_data[i]);
+    free(new_data);
+    
+    return result;
+}
+
+Matrix* matrix_add_cols(const Matrix* mat, int16_t num_cols, const void* fill_value) {
+    if (!mat || num_cols <= 0) return NULL;
+    
+    int16_t rows = mat->rows;
+    int16_t new_cols = mat->cols + num_cols;
+    
+    // Create new matrix data structure  
+    void** new_data = (void**)malloc(rows * sizeof(void*));
+    if (!new_data) return NULL;
+    
+    // Create fill pattern (default to zero)
+    void* fill_pattern = malloc(mat->element_size);
+    if (!fill_pattern) {
+        free(new_data);
+        return NULL;
+    }
+    
+    if (fill_value) {
+        memcpy(fill_pattern, fill_value, mat->element_size);
+    } else {
+        memset(fill_pattern, 0, mat->element_size);
+    }
+    
+    // Create each row with original data + new columns
+    for (int r = 0; r < rows; ++r) {
+        new_data[r] = malloc(new_cols * mat->element_size);
+        if (!new_data[r]) {
+            for (int i = 0; i < r; ++i) free(new_data[i]);
+            free(new_data);
+            free(fill_pattern);
+            return NULL;
+        }
+        
+        // Copy existing columns
+        memcpy(new_data[r], mat->data[r], mat->cols * mat->element_size);
+        
+        // Fill new columns with the pattern
+        for (int c = mat->cols; c < new_cols; ++c) {
+            memcpy((char*)new_data[r] + c * mat->element_size, fill_pattern, mat->element_size);
+        }
+    }
+    
+    free(fill_pattern);
+    
+    // Create the new matrix
+    Matrix* result = matrix_create_from_2d_array(rows, new_cols, new_data, mat->element_size);
+    
+    // Clean up temporary data
+    for (int i = 0; i < rows; ++i) free(new_data[i]);
+    free(new_data);
+    
+    return result;
 }

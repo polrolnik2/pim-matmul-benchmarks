@@ -288,6 +288,201 @@ int test_join_unmatching_dimensions_error() {
     return 0;
 }
 
+int test_matrix_add_rows_with_zero_fill() {
+    printf("Running test_matrix_add_rows_with_zero_fill...\n");
+    int8_t row0[] = {1, 2};
+    int8_t row1[] = {3, 4};
+    int8_t* data[] = {row0, row1};
+    Matrix* m = matrix_create_from_2d_array(2, 2, (void**)data, sizeof(int8_t));
+    
+    // Add 2 rows with default zero fill
+    Matrix* extended = matrix_add_rows(m, 2, NULL);
+    ASSERT_TRUE(extended != NULL, "Matrix add rows failed");
+    ASSERT_EQ(extended->rows, 4, "Extended matrix should have 4 rows");
+    ASSERT_EQ(extended->cols, 2, "Extended matrix should have 2 cols");
+    
+    // Check original data is preserved
+    int8_t val;
+    matrix_get(extended, 0, 0, &val);
+    ASSERT_EQ(val, 1, "Original data (0,0)");
+    matrix_get(extended, 0, 1, &val);
+    ASSERT_EQ(val, 2, "Original data (0,1)");
+    matrix_get(extended, 1, 0, &val);
+    ASSERT_EQ(val, 3, "Original data (1,0)");
+    matrix_get(extended, 1, 1, &val);
+    ASSERT_EQ(val, 4, "Original data (1,1)");
+    
+    // Check new rows are zero-filled
+    matrix_get(extended, 2, 0, &val);
+    ASSERT_EQ(val, 0, "New row (2,0) should be zero");
+    matrix_get(extended, 2, 1, &val);
+    ASSERT_EQ(val, 0, "New row (2,1) should be zero");
+    matrix_get(extended, 3, 0, &val);
+    ASSERT_EQ(val, 0, "New row (3,0) should be zero");
+    matrix_get(extended, 3, 1, &val);
+    ASSERT_EQ(val, 0, "New row (3,1) should be zero");
+    
+    matrix_free(m);
+    matrix_free(extended);
+    return 0;
+}
+
+int test_matrix_add_rows_with_custom_fill() {
+    printf("Running test_matrix_add_rows_with_custom_fill...\n");
+    int8_t row0[] = {1, 2};
+    int8_t row1[] = {3, 4};
+    int8_t* data[] = {row0, row1};
+    Matrix* m = matrix_create_from_2d_array(2, 2, (void**)data, sizeof(int8_t));
+    
+    // Add 1 row with custom fill value
+    int8_t fill_value = 9;
+    Matrix* extended = matrix_add_rows(m, 1, &fill_value);
+    ASSERT_TRUE(extended != NULL, "Matrix add rows failed");
+    ASSERT_EQ(extended->rows, 3, "Extended matrix should have 3 rows");
+    ASSERT_EQ(extended->cols, 2, "Extended matrix should have 2 cols");
+    
+    // Check original data is preserved
+    int8_t val;
+    matrix_get(extended, 0, 0, &val);
+    ASSERT_EQ(val, 1, "Original data (0,0)");
+    matrix_get(extended, 1, 1, &val);
+    ASSERT_EQ(val, 4, "Original data (1,1)");
+    
+    // Check new row is filled with custom value
+    matrix_get(extended, 2, 0, &val);
+    ASSERT_EQ(val, 9, "New row (2,0) should be filled value");
+    matrix_get(extended, 2, 1, &val);
+    ASSERT_EQ(val, 9, "New row (2,1) should be filled value");
+    
+    matrix_free(m);
+    matrix_free(extended);
+    return 0;
+}
+
+int test_matrix_add_cols_with_zero_fill() {
+    printf("Running test_matrix_add_cols_with_zero_fill...\n");
+    int8_t row0[] = {1, 2};
+    int8_t row1[] = {3, 4};
+    int8_t* data[] = {row0, row1};
+    Matrix* m = matrix_create_from_2d_array(2, 2, (void**)data, sizeof(int8_t));
+    
+    // Add 2 columns with default zero fill
+    Matrix* extended = matrix_add_cols(m, 2, NULL);
+    ASSERT_TRUE(extended != NULL, "Matrix add cols failed");
+    ASSERT_EQ(extended->rows, 2, "Extended matrix should have 2 rows");
+    ASSERT_EQ(extended->cols, 4, "Extended matrix should have 4 cols");
+    
+    // Check original data is preserved
+    int8_t val;
+    matrix_get(extended, 0, 0, &val);
+    ASSERT_EQ(val, 1, "Original data (0,0)");
+    matrix_get(extended, 0, 1, &val);
+    ASSERT_EQ(val, 2, "Original data (0,1)");
+    matrix_get(extended, 1, 0, &val);
+    ASSERT_EQ(val, 3, "Original data (1,0)");
+    matrix_get(extended, 1, 1, &val);
+    ASSERT_EQ(val, 4, "Original data (1,1)");
+    
+    // Check new columns are zero-filled
+    matrix_get(extended, 0, 2, &val);
+    ASSERT_EQ(val, 0, "New col (0,2) should be zero");
+    matrix_get(extended, 0, 3, &val);
+    ASSERT_EQ(val, 0, "New col (0,3) should be zero");
+    matrix_get(extended, 1, 2, &val);
+    ASSERT_EQ(val, 0, "New col (1,2) should be zero");
+    matrix_get(extended, 1, 3, &val);
+    ASSERT_EQ(val, 0, "New col (1,3) should be zero");
+    
+    matrix_free(m);
+    matrix_free(extended);
+    return 0;
+}
+
+int test_matrix_add_cols_with_custom_fill() {
+    printf("Running test_matrix_add_cols_with_custom_fill...\n");
+    int8_t row0[] = {1, 2};
+    int8_t row1[] = {3, 4};
+    int8_t* data[] = {row0, row1};
+    Matrix* m = matrix_create_from_2d_array(2, 2, (void**)data, sizeof(int8_t));
+    
+    // Add 1 column with custom fill value
+    int8_t fill_value = 7;
+    Matrix* extended = matrix_add_cols(m, 1, &fill_value);
+    ASSERT_TRUE(extended != NULL, "Matrix add cols failed");
+    ASSERT_EQ(extended->rows, 2, "Extended matrix should have 2 rows");
+    ASSERT_EQ(extended->cols, 3, "Extended matrix should have 3 cols");
+    
+    // Check original data is preserved
+    int8_t val;
+    matrix_get(extended, 0, 0, &val);
+    ASSERT_EQ(val, 1, "Original data (0,0)");
+    matrix_get(extended, 1, 1, &val);
+    ASSERT_EQ(val, 4, "Original data (1,1)");
+    
+    // Check new column is filled with custom value
+    matrix_get(extended, 0, 2, &val);
+    ASSERT_EQ(val, 7, "New col (0,2) should be filled value");
+    matrix_get(extended, 1, 2, &val);
+    ASSERT_EQ(val, 7, "New col (1,2) should be filled value");
+    
+    matrix_free(m);
+    matrix_free(extended);
+    return 0;
+}
+
+int test_matrix_add_rows_cols_error_cases() {
+    printf("Running test_matrix_add_rows_cols_error_cases...\n");
+    int8_t row0[] = {1, 2};
+    int8_t row1[] = {3, 4};
+    int8_t* data[] = {row0, row1};
+    Matrix* m = matrix_create_from_2d_array(2, 2, (void**)data, sizeof(int8_t));
+    
+    // Test error cases
+    Matrix* result = matrix_add_rows(NULL, 1, NULL);
+    ASSERT_TRUE(result == NULL, "Add rows with NULL matrix should fail");
+    
+    result = matrix_add_rows(m, 0, NULL);
+    ASSERT_TRUE(result == NULL, "Add 0 rows should fail");
+    
+    result = matrix_add_rows(m, -1, NULL);
+    ASSERT_TRUE(result == NULL, "Add negative rows should fail");
+    
+    result = matrix_add_cols(NULL, 1, NULL);
+    ASSERT_TRUE(result == NULL, "Add cols with NULL matrix should fail");
+    
+    result = matrix_add_cols(m, 0, NULL);
+    ASSERT_TRUE(result == NULL, "Add 0 cols should fail");
+    
+    result = matrix_add_cols(m, -1, NULL);
+    ASSERT_TRUE(result == NULL, "Add negative cols should fail");
+    
+    matrix_free(m);
+    return 0;
+}
+
+int test_matrix_add_rows_cols_different_types() {
+    printf("Running test_matrix_add_rows_cols_different_types...\n");
+    
+    // Test with int16_t
+    int16_t row0_16[] = {100, 200};
+    int16_t row1_16[] = {300, 400};
+    int16_t* data_16[] = {row0_16, row1_16};
+    Matrix* m16 = matrix_create_from_2d_array(2, 2, (void**)data_16, sizeof(int16_t));
+    
+    int16_t fill_16 = 999;
+    Matrix* extended_16 = matrix_add_rows(m16, 1, &fill_16);
+    ASSERT_TRUE(extended_16 != NULL, "Matrix add rows int16 failed");
+    ASSERT_EQ(extended_16->rows, 3, "Extended int16 matrix should have 3 rows");
+    
+    int16_t val_16;
+    matrix_get(extended_16, 2, 0, &val_16);
+    ASSERT_EQ(val_16, 999, "New row should have fill value");
+    
+    matrix_free(m16);
+    matrix_free(extended_16);
+    return 0;
+}
+
 int main() {
     int fails = 0;
     fails += test_matrix_create_from_2d_array_and_free();
@@ -302,6 +497,12 @@ int main() {
     fails += test_matrix_split_into_more_than_rows_cols_error();
     fails += test_split_matrix_indivisible_error();
     fails += test_join_unmatching_dimensions_error();
+    fails += test_matrix_add_rows_with_zero_fill();
+    fails += test_matrix_add_rows_with_custom_fill();
+    fails += test_matrix_add_cols_with_zero_fill();
+    fails += test_matrix_add_cols_with_custom_fill();
+    fails += test_matrix_add_rows_cols_error_cases();
+    fails += test_matrix_add_rows_cols_different_types();
     if (fails == 0) {
         printf("[PASS] All matrix tests passed!\n");
         return 0;
