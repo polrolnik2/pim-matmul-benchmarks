@@ -158,25 +158,29 @@ int test_pim_multiply_matrices(simplepim_management_t* table_management) {
 }
 
 int test_multiplying_scattered_matrices(simplepim_management_t* table_management) {
-    Matrix* mat1 = matrix_create_from_2d_array(4, 4, (int8_t*[]) {
-        (int8_t[]){1, 2, 3, 4},
-        (int8_t[]){5, 6, 7, 8},
-        (int8_t[]){9, 10, 11, 12},
-        (int8_t[]){13, 14, 15, 16}
-    }, sizeof(int8_t));
-    Matrix* mat2 = matrix_create_from_2d_array(4, 4, (int8_t*[]) {
-        (int8_t[]){1, 2, 3, 4},
-        (int8_t[]){5, 6, 7, 8},
-        (int8_t[]){9, 10, 11, 12},
-        (int8_t[]){13, 14, 15, 16}
-    }, sizeof(int8_t));
+    int8_t mat1_row0[] = {1, 2, 3, 4};
+    int8_t mat1_row1[] = {5, 6, 7, 8};
+    int8_t mat1_row2[] = {9, 10, 11, 12};
+    int8_t mat1_row3[] = {13, 14, 15, 16};
+    int8_t* mat1_data[] = {mat1_row0, mat1_row1, mat1_row2, mat1_row3};
+    Matrix* mat1 = matrix_create_from_2d_array(4, 4, (void**)mat1_data, sizeof(int8_t));
+    // Transpose mat2 before multiplication
+    int8_t mat2_row0[] = {1, 5, 9, 13};
+    int8_t mat2_row1[] = {2, 6, 10, 14};
+    int8_t mat2_row2[] = {3, 7, 11, 15};
+    int8_t mat2_row3[] = {4, 8, 12, 16};
+    int8_t* mat2_data[] = {mat2_row0, mat2_row1, mat2_row2, mat2_row3};
+    Matrix* mat2 = matrix_create_from_2d_array(4, 4, (void**)mat2_data, sizeof(int8_t));
+    Matrix* submatrices[] = {mat2, mat2, mat2, mat2}; // Create 4 submatrices of mat2
+    mat2 = matrix_join_by_rows(submatrices, 4); // Join to make it 8x4
     ASSERT_TRUE(mat1 != NULL && mat2 != NULL, "Matrix creation failed");
-    pim_matrix_handle_t* handle1 = scatter_matrix_to_pim(mat1, 4, 2, table_management);
-    pim_matrix_handle_t* handle2 = scatter_matrix_to_pim(mat2, 2, 4, table_management);
+    pim_matrix_handle_t* handle1 = broadcast_matrix_to_pim(mat1, table_management);
+    pim_matrix_handle_t* handle2 = scatter_matrix_to_pim(mat2, 4, 4, table_management);
     ASSERT_TRUE(handle1 != NULL && handle2 != NULL, "Scatter to PIM failed");
     pim_matrix_handle_t* result_handle = multiply_pim_matrices(handle1, handle2, table_management);
     ASSERT_TRUE(result_handle != NULL, "Multiply PIM matrices failed");
     Matrix* result = gather_matrix_from_pim(result_handle, mat1->rows, mat1->cols, sizeof(int16_t), table_management);
+    printf("Result:\n%s\n", matrix_sprint(result, "| %d |"));
     ASSERT_TRUE(result != NULL, "Gather from PIM failed");
     Matrix* expected = matrix_create_from_2d_array(4, 4, (int8_t*[]) {
         (int8_t[]){250, 260, 270, 280},
@@ -204,6 +208,7 @@ int main() {
     fails += test_pim_broadcast_multiple_scatter_gather(table_management);
     fails += test_multiplying_scattered_matrices(table_management);
     fails += test_pim_multiply_matrices(table_management);
+    fails += test_multiplying_scattered_matrices(table_management);
     if (fails == 0) {
         printf("[PASS] All PIM matrix tests passed!\n");
         return 0;
