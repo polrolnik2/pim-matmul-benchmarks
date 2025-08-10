@@ -566,3 +566,115 @@ Matrix* matrix_add_cols(const Matrix* mat, int16_t num_cols, const void* fill_va
     
     return result;
 }
+
+Matrix* matrix_remove_rows(const Matrix* mat, int16_t num_rows) {
+    if (!mat || num_rows < 0) return NULL;
+    
+    if (num_rows == 0) {
+        // If no rows to remove, return a clone of the original matrix
+        return matrix_clone(mat);
+    }
+    
+    if (num_rows >= mat->rows) {
+        // Cannot remove more rows than exist
+        return NULL;
+    }
+    
+    int16_t new_rows = mat->rows - num_rows;
+    int16_t cols = mat->cols;
+    
+    // Create new matrix data structure
+    void** new_data = (void**)malloc(new_rows * sizeof(void*));
+    if (!new_data) return NULL;
+    
+    // Copy existing rows (exclude the last num_rows)
+    for (int r = 0; r < new_rows; ++r) {
+        new_data[r] = malloc(cols * mat->element_size);
+        if (!new_data[r]) {
+            for (int i = 0; i < r; ++i) free(new_data[i]);
+            free(new_data);
+            return NULL;
+        }
+        memcpy(new_data[r], mat->data[r], cols * mat->element_size);
+    }
+    
+    // Create the new matrix
+    Matrix* result = matrix_create_from_2d_array(new_rows, cols, new_data, mat->element_size);
+    
+    // Clean up temporary data
+    for (int i = 0; i < new_rows; ++i) free(new_data[i]);
+    free(new_data);
+    
+    return result;
+}
+
+Matrix* matrix_remove_cols(const Matrix* mat, int16_t num_cols) {
+    if (!mat || num_cols < 0) return NULL;
+    
+    if (num_cols == 0) {
+        // If no columns to remove, return a clone of the original matrix
+        return matrix_clone(mat);
+    }
+    
+    if (num_cols >= mat->cols) {
+        // Cannot remove more columns than exist
+        return NULL;
+    }
+    
+    int16_t rows = mat->rows;
+    int16_t new_cols = mat->cols - num_cols;
+    
+    // Create new matrix data structure  
+    void** new_data = (void**)malloc(rows * sizeof(void*));
+    if (!new_data) return NULL;
+    
+    // Create each row with reduced columns
+    for (int r = 0; r < rows; ++r) {
+        new_data[r] = malloc(new_cols * mat->element_size);
+        if (!new_data[r]) {
+            for (int i = 0; i < r; ++i) free(new_data[i]);
+            free(new_data);
+            return NULL;
+        }
+        
+        // Copy existing columns (exclude the last num_cols)
+        memcpy(new_data[r], mat->data[r], new_cols * mat->element_size);
+    }
+    
+    // Create the new matrix
+    Matrix* result = matrix_create_from_2d_array(rows, new_cols, new_data, mat->element_size);
+    
+    // Clean up temporary data
+    for (int i = 0; i < rows; ++i) free(new_data[i]);
+    free(new_data);
+    
+    return result;
+}
+
+Matrix* matrix_extract_submatrix(const Matrix* mat, int16_t target_rows, int16_t target_cols) {
+    if (!mat || target_rows <= 0 || target_cols <= 0) return NULL;
+    
+    if (target_rows > mat->rows || target_cols > mat->cols) {
+        // Cannot extract more rows/columns than exist
+        return NULL;
+    }
+    
+    if (target_rows == mat->rows && target_cols == mat->cols) {
+        // If extracting the same dimensions, return a clone
+        return matrix_clone(mat);
+    }
+    
+    // First remove excess rows from the bottom
+    int16_t rows_to_remove = mat->rows - target_rows;
+    Matrix* temp_matrix = matrix_remove_rows(mat, rows_to_remove);
+    if (!temp_matrix) return NULL;
+    
+    // Then remove excess columns from the right
+    int16_t cols_to_remove = mat->cols - target_cols;
+    Matrix* result = matrix_remove_cols(temp_matrix, cols_to_remove);
+    
+    // Clean up temporary matrix
+    matrix_free(temp_matrix);
+    
+    return result;
+}

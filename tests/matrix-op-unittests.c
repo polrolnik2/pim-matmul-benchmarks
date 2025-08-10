@@ -483,6 +483,166 @@ int test_matrix_add_rows_cols_different_types() {
     return 0;
 }
 
+int test_matrix_remove_rows() {
+    printf("Running test_matrix_remove_rows...\n");
+    int8_t row0[] = {1, 2, 3};
+    int8_t row1[] = {4, 5, 6};
+    int8_t row2[] = {7, 8, 9};
+    int8_t* data[] = {row0, row1, row2};
+    Matrix* m = matrix_create_from_2d_array(3, 3, (void**)data, sizeof(int8_t));
+    
+    // Remove 1 row
+    Matrix* reduced = matrix_remove_rows(m, 1);
+    ASSERT_TRUE(reduced != NULL, "Matrix remove rows failed");
+    ASSERT_EQ(reduced->rows, 2, "Reduced matrix should have 2 rows");
+    ASSERT_EQ(reduced->cols, 3, "Reduced matrix should have 3 cols");
+    
+    // Check that only first 2 rows remain
+    int8_t val;
+    matrix_get(reduced, 0, 0, &val);
+    ASSERT_EQ(val, 1, "First row should be preserved");
+    matrix_get(reduced, 1, 2, &val);
+    ASSERT_EQ(val, 6, "Second row should be preserved");
+    
+    matrix_free(m);
+    matrix_free(reduced);
+    return 0;
+}
+
+int test_matrix_remove_cols() {
+    printf("Running test_matrix_remove_cols...\n");
+    int8_t row0[] = {1, 2, 3};
+    int8_t row1[] = {4, 5, 6};
+    int8_t* data[] = {row0, row1};
+    Matrix* m = matrix_create_from_2d_array(2, 3, (void**)data, sizeof(int8_t));
+    
+    // Remove 1 column
+    Matrix* reduced = matrix_remove_cols(m, 1);
+    ASSERT_TRUE(reduced != NULL, "Matrix remove cols failed");
+    ASSERT_EQ(reduced->rows, 2, "Reduced matrix should have 2 rows");
+    ASSERT_EQ(reduced->cols, 2, "Reduced matrix should have 2 cols");
+    
+    // Check that only first 2 columns remain
+    int8_t val;
+    matrix_get(reduced, 0, 0, &val);
+    ASSERT_EQ(val, 1, "First column should be preserved");
+    matrix_get(reduced, 0, 1, &val);
+    ASSERT_EQ(val, 2, "Second column should be preserved");
+    matrix_get(reduced, 1, 0, &val);
+    ASSERT_EQ(val, 4, "First column second row should be preserved");
+    matrix_get(reduced, 1, 1, &val);
+    ASSERT_EQ(val, 5, "Second column second row should be preserved");
+    
+    matrix_free(m);
+    matrix_free(reduced);
+    return 0;
+}
+
+int test_matrix_extract_submatrix() {
+    printf("Running test_matrix_extract_submatrix...\n");
+    int8_t row0[] = {1, 2, 3, 4};
+    int8_t row1[] = {5, 6, 7, 8};
+    int8_t row2[] = {9, 10, 11, 12};
+    int8_t* data[] = {row0, row1, row2};
+    Matrix* m = matrix_create_from_2d_array(3, 4, (void**)data, sizeof(int8_t));
+    
+    // Extract 2x2 submatrix from top-left
+    Matrix* sub = matrix_extract_submatrix(m, 2, 2);
+    ASSERT_TRUE(sub != NULL, "Matrix extract submatrix failed");
+    ASSERT_EQ(sub->rows, 2, "Extracted matrix should have 2 rows");
+    ASSERT_EQ(sub->cols, 2, "Extracted matrix should have 2 cols");
+    
+    // Check extracted values
+    int8_t val;
+    matrix_get(sub, 0, 0, &val);
+    ASSERT_EQ(val, 1, "Extracted (0,0) should be 1");
+    matrix_get(sub, 0, 1, &val);
+    ASSERT_EQ(val, 2, "Extracted (0,1) should be 2");
+    matrix_get(sub, 1, 0, &val);
+    ASSERT_EQ(val, 5, "Extracted (1,0) should be 5");
+    matrix_get(sub, 1, 1, &val);
+    ASSERT_EQ(val, 6, "Extracted (1,1) should be 6");
+    
+    matrix_free(m);
+    matrix_free(sub);
+    return 0;
+}
+
+int test_matrix_remove_error_cases() {
+    printf("Running test_matrix_remove_error_cases...\n");
+    int8_t row0[] = {1, 2};
+    int8_t row1[] = {3, 4};
+    int8_t* data[] = {row0, row1};
+    Matrix* m = matrix_create_from_2d_array(2, 2, (void**)data, sizeof(int8_t));
+    
+    // Test error cases
+    Matrix* result = matrix_remove_rows(NULL, 1);
+    ASSERT_TRUE(result == NULL, "Remove rows with NULL matrix should fail");
+    
+    result = matrix_remove_rows(m, -1);
+    ASSERT_TRUE(result == NULL, "Remove negative rows should fail");
+    
+    result = matrix_remove_rows(m, 3);
+    ASSERT_TRUE(result == NULL, "Remove more rows than exist should fail");
+    
+    result = matrix_remove_cols(NULL, 1);
+    ASSERT_TRUE(result == NULL, "Remove cols with NULL matrix should fail");
+    
+    result = matrix_remove_cols(m, -1);
+    ASSERT_TRUE(result == NULL, "Remove negative cols should fail");
+    
+    result = matrix_remove_cols(m, 3);
+    ASSERT_TRUE(result == NULL, "Remove more cols than exist should fail");
+    
+    result = matrix_extract_submatrix(NULL, 1, 1);
+    ASSERT_TRUE(result == NULL, "Extract with NULL matrix should fail");
+    
+    result = matrix_extract_submatrix(m, 0, 1);
+    ASSERT_TRUE(result == NULL, "Extract with zero rows should fail");
+    
+    result = matrix_extract_submatrix(m, 1, 0);
+    ASSERT_TRUE(result == NULL, "Extract with zero cols should fail");
+    
+    result = matrix_extract_submatrix(m, 3, 2);
+    ASSERT_TRUE(result == NULL, "Extract more rows than exist should fail");
+    
+    result = matrix_extract_submatrix(m, 2, 3);
+    ASSERT_TRUE(result == NULL, "Extract more cols than exist should fail");
+    
+    matrix_free(m);
+    return 0;
+}
+
+int test_matrix_add_remove_roundtrip() {
+    printf("Running test_matrix_add_remove_roundtrip...\n");
+    int8_t row0[] = {1, 2};
+    int8_t row1[] = {3, 4};
+    int8_t* data[] = {row0, row1};
+    Matrix* original = matrix_create_from_2d_array(2, 2, (void**)data, sizeof(int8_t));
+    
+    // Add then remove rows
+    Matrix* extended_rows = matrix_add_rows(original, 2, NULL);
+    Matrix* restored_rows = matrix_remove_rows(extended_rows, 2);
+    ASSERT_TRUE(matrix_compare(original, restored_rows), "Add/remove rows roundtrip failed");
+    
+    // Add then remove columns  
+    Matrix* extended_cols = matrix_add_cols(original, 2, NULL);
+    Matrix* restored_cols = matrix_remove_cols(extended_cols, 2);
+    ASSERT_TRUE(matrix_compare(original, restored_cols), "Add/remove cols roundtrip failed");
+    
+    // Extract original dimensions should be equivalent
+    Matrix* extracted = matrix_extract_submatrix(extended_rows, 2, 2);
+    ASSERT_TRUE(matrix_compare(original, extracted), "Extract original dimensions failed");
+    
+    matrix_free(original);
+    matrix_free(extended_rows);
+    matrix_free(restored_rows);
+    matrix_free(extended_cols);
+    matrix_free(restored_cols);
+    matrix_free(extracted);
+    return 0;
+}
+
 int main() {
     int fails = 0;
     fails += test_matrix_create_from_2d_array_and_free();
@@ -503,6 +663,11 @@ int main() {
     fails += test_matrix_add_cols_with_custom_fill();
     fails += test_matrix_add_rows_cols_error_cases();
     fails += test_matrix_add_rows_cols_different_types();
+    fails += test_matrix_remove_rows();
+    fails += test_matrix_remove_cols();
+    fails += test_matrix_extract_submatrix();
+    fails += test_matrix_remove_error_cases();
+    fails += test_matrix_add_remove_roundtrip();
     if (fails == 0) {
         printf("[PASS] All matrix tests passed!\n");
         return 0;

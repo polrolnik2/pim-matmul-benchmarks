@@ -191,6 +191,31 @@ Matrix* matrix_add_rows(const Matrix* mat, int16_t num_rows, const void* fill_va
  */
 Matrix* matrix_add_cols(const Matrix* mat, int16_t num_cols, const void* fill_value);
 
+/**
+ * @brief Remove rows from the end of a matrix.
+ * @param mat Pointer to Matrix to reduce.
+ * @param num_rows Number of rows to remove from the end.
+ * @return Pointer to new Matrix with removed rows (caller must free), or NULL on failure.
+ */
+Matrix* matrix_remove_rows(const Matrix* mat, int16_t num_rows);
+
+/**
+ * @brief Remove columns from the end of a matrix.
+ * @param mat Pointer to Matrix to reduce.
+ * @param num_cols Number of columns to remove from the end.
+ * @return Pointer to new Matrix with removed columns (caller must free), or NULL on failure.
+ */
+Matrix* matrix_remove_cols(const Matrix* mat, int16_t num_cols);
+
+/**
+ * @brief Extract a submatrix with specified dimensions from the top-left corner.
+ * @param mat Pointer to source Matrix.
+ * @param target_rows Number of rows to extract.
+ * @param target_cols Number of columns to extract.
+ * @return Pointer to new Matrix with extracted dimensions (caller must free), or NULL on failure.
+ */
+Matrix* matrix_extract_submatrix(const Matrix* mat, int16_t target_rows, int16_t target_cols);
+
 // Type-safe helper macros for common data types
 #define MATRIX_CREATE_INT8(rows, cols, data) matrix_create_from_2d_array(rows, cols, (void**)data, sizeof(int8_t))
 #define MATRIX_CREATE_INT16(rows, cols, data) matrix_create_from_2d_array(rows, cols, (void**)data, sizeof(int16_t))
