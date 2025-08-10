@@ -1,0 +1,4 @@
+
+runtime_params:
+  - NR_TASKLETS: 16
+  - DPU_MATRIX_MULTIPLICATION_BIN: '"${PIM_MATMUL_BENCHMARKS_ROOT}/bin/matrix_multiply_dpu"'

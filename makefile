@@ -15,17 +15,25 @@ DEPS_YAML := $(ROOT)/defn/dependencies.yaml
 DEPS_SRCS := $(shell python3 -c "import yaml,sys; print(' '.join(yaml.safe_load(open('$(DEPS_YAML)'))['sources']))" 2>/dev/null || echo "")
 INCLUDE_DIRS := $(shell python3 -c "import yaml; print(' '.join('-I'+d for d in yaml.safe_load(open('$(DEPS_YAML)'))['include_dirs']))" 2>/dev/null || echo "")
 
+# Extract all runtime parameters as compiler flags
+PARAMS_YAML := $(ROOT)/defn/params.yaml
+RUNTIME_PARAM_FLAGS := $(shell python3 -c "import yaml; params=yaml.safe_load(open('$(PARAMS_YAML)')); print(' '.join([f'-D{k}={v}' for item in params.get('runtime_params', []) for k, v in item.items()]))" 2>/dev/null || echo "")
+
 CFLAGS += $(INCLUDE_DIRS)
+CFLAGS += $(RUNTIME_PARAM_FLAGS)
 
 SimplePIM:
-	git clone --depth 1 --filter=blob:none --sparse https://github.com/CMU-SAFARI/SimplePIM.git lib/simplepim
-	cd lib/simplepim && git sparse-checkout set lib
-	mv lib/simplepim/lib/* lib/simplepim/
-	rm -rf lib/simplepim/lib
+	@if [ ! -d lib/simplepim ]; then \
+		git clone --depth 1 --filter=blob:none --sparse https://github.com/CMU-SAFARI/SimplePIM.git lib/simplepim && \
+		cd lib/simplepim && git sparse-checkout set lib && \
+		mv lib/simplepim/lib/* lib/simplepim/ && \
+		rm -rf lib/simplepim/lib; \
+	fi
 
 clean:
 	rm -rf lib/simplepim
 	rm -rf $(BIN_DIR)
+	rm -rf $(PIM_MATMUL_BENCHMARKS_ROOT)/scratch/
 
 BIN_DIR := bin
 
@@ -39,7 +47,7 @@ bin:
 
 build-unittests: $(UNITTEST_BINS)
 
-run-unittests: docker-build
+run-unittests: docker-build SimplePIM bin build-dpu
 	@mkdir -p scratch; \
 	set -e; \
 	for t in $(UNITTEST_SRCS); do \
@@ -51,4 +59,11 @@ run-unittests: docker-build
 	done; \
 	python3 scripts/parse_unittest_logs.py
 
-.PHONY: SimplePIM clean build-unittests run-unittests
+# Build DPU binaries
+build-dpu: bin
+	docker run --rm --platform linux/amd64 -v $(CURDIR):/workspace $(DOCKER_IMAGE) bash -c \
+		". /opt/upmem-2025.1.0-Linux-x86_64/upmem_env.sh simulator && \
+		. /workspace/source.me && \
+		dpu-upmem-dpurte-clang -O2 $(RUNTIME_PARAM_FLAGS) -g -o /workspace/bin/matrix_multiply_dpu /workspace/src/dpu/pim_dpu_matrix_multiply.c -I src"
+
+.PHONY: SimplePIM clean build-unittests run-unittests build-dpu

@@ -10,6 +10,8 @@ sources:
   - lib/simplepim/management/SmallTableInit.c
   - lib/simplepim/management/Management.c
   - lib/simplepim/processing/gen_red/GenRed.c
+  - lib/simplepim/processing/map/Map.c
+  - lib/simplepim/processing/zip/Zip.c
   
 include_dirs:
   - src/

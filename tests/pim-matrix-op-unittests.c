@@ -10,12 +10,16 @@
 #include "communication/CommOps.h"
 #include "management/Management.h"
 
+#include <assert.h>
+#include <dpu.h>
+#include <dpu_log.h>
+#include <stdio.h>
+
 #include "matrix.h"
 #include "pim_matrix_handle.h"
 
-int test_pim_broadcast_gather() {
+int test_pim_broadcast_gather(simplepim_management_t* table_management) {
     printf("Running test_pim_broadcast_gather...\n");
-    simplepim_management_t* table_management = table_management_init(5);
     Matrix* mat = matrix_create_from_2d_array(2, 2, (int8_t*[]) {
         (int8_t[]){1, 2},
         (int8_t[]){3, 4}
@@ -32,9 +36,8 @@ int test_pim_broadcast_gather() {
     return 0;
 }
 
-int test_pim_broadcast_free() {
+int test_pim_broadcast_free(simplepim_management_t* table_management) {
     printf("Running test_pim_broadcast_free...\n");
-    simplepim_management_t* table_management = table_management_init(5);
     Matrix* mat = matrix_create_from_2d_array(2, 2, (int8_t*[]) {
         (int8_t[]){1, 2},
         (int8_t[]){3, 4}
@@ -49,9 +52,8 @@ int test_pim_broadcast_free() {
     return 0;
 }
 
-int test_pim_scatter_gather() {
+int test_pim_scatter_gather(simplepim_management_t* table_management) {
     printf("Running test_pim_scatter_gather...\n");
-    simplepim_management_t* table_management = table_management_init(5);
     Matrix* mat = matrix_create_from_2d_array(4, 4, (int8_t*[]) {
         (int8_t[]){1, 2, 5, 6},
         (int8_t[]){3, 4, 7, 8},
@@ -71,9 +73,8 @@ int test_pim_scatter_gather() {
 }
 
 // Test for mantaining data integrity with broadcasting scattering and gathering with multiple PIM matrices
-int test_pim_broadcast_multiple_scatter_gather() {
+int test_pim_broadcast_multiple_scatter_gather(simplepim_management_t* table_management) {
     printf("Running test_pim_broadcast_multiple_scatter_gather...\n");
-    simplepim_management_t* table_management = table_management_init(5);
     Matrix* mat1 = matrix_create_from_2d_array(2, 2, (int8_t*[]) {
         (int8_t[]){1, 2},
         (int8_t[]){3, 4}
@@ -115,77 +116,91 @@ int test_pim_broadcast_multiple_scatter_gather() {
     return 0;
 }
 
-int test_adding_scattered_matrices() {
-    Matrix* mat1 = matrix_create(2, 2, (int8_t*[]) {
-        (int8_t[]){1, 2},
-        (int8_t[]){3, 4}
+int test_pim_multiply_matrices(simplepim_management_t* table_management) {
+    Matrix* mat1 = matrix_create_from_2d_array(4, 4, (int8_t*[]) {
+        (int8_t[]){1, 2, 3, 4},
+        (int8_t[]){5, 6, 7, 8},
+        (int8_t[]){9, 10, 11, 12},
+        (int8_t[]){13, 14, 15, 16}
     });
-    Matrix* mat2 = matrix_create(2, 2, (int8_t*[]) {
-        (int8_t[]){5, 6},
-        (int8_t[]){7, 8}
+    Matrix* mat2 = matrix_create_from_2d_array(4, 4, (int8_t*[]) {
+        (int8_t[]){17, 18, 19, 20},
+        (int8_t[]){21, 22, 23, 24},
+        (int8_t[]){25, 26, 27, 28},
+        (int8_t[]){29, 30, 31, 32}
     });
     ASSERT_TRUE(mat1 != NULL && mat2 != NULL, "Matrix creation failed");
-    pim_matrix_handle_t* handle1 = scatter_matrix_to_pim(mat1, 1, 1);
-    pim_matrix_handle_t* handle2 = scatter_matrix_to_pim(mat2, 1, 1);
-    ASSERT_TRUE(handle1 != NULL && handle2 != NULL, "Scatter to PIM failed");
-    pim_matrix_handle_t* result_handle = add_pim_matrices(handle1, handle2);
-    ASSERT_TRUE(result_handle != NULL, "Add PIM matrices failed");
-    Matrix* result = gather_matrix_from_pim(result_handle->pim_handle, mat1->rows, mat1->cols);
+    pim_matrix_handle_t* handle1 = broadcast_matrix_to_pim(mat1, table_management);
+    pim_matrix_handle_t* handle2 = broadcast_matrix_to_pim(mat2, table_management);
+    ASSERT_TRUE(handle1 != NULL && handle2 != NULL, "Broadcast to PIM failed");
+    pim_matrix_handle_t* result_handle = multiply_pim_matrices(handle1, handle2, table_management);
+    ASSERT_TRUE(result_handle != NULL, "Multiply PIM matrices failed");
+    Matrix* result = gather_matrix_from_pim(result_handle, mat1->rows, mat1->cols, table_management);
     ASSERT_TRUE(result != NULL, "Gather from PIM failed");
-    Matrix* expected = matrix_create(2, 2, (int8_t*[]) {
-        (int8_t[]){6, 8},
-        (int8_t[]){10, 12}
+    Matrix* expected = matrix_create_from_2d_array(4, 4, (int8_t*[]) {
+        (int8_t[]){250, 260, 270, 280},
+        (int8_t[]){618, 644, 670, 696},
+        (int8_t[]){986, 1028, 1070, 1112},
+        (int8_t[]){1354, 1412, 1470, 1528}
     });
     ASSERT_TRUE(matrix_compare(result, expected), "Result matrix should match expected");
     matrix_free(mat1);
     matrix_free(mat2);
     matrix_free(result);
     matrix_free(expected);
-    free_pim_matrix_handle(handle1);
-    free_pim_matrix_handle(handle2);
-    free_pim_matrix_handle(result_handle);  
+    free_pim_matrix_handle(handle1, table_management);
+    free_pim_matrix_handle(handle2, table_management);
+    free_pim_matrix_handle(result_handle, table_management);
     return 0;
 }
 
-int test_multiplying_scattered_matrices() {
-    Matrix* mat1 = matrix_create(2, 2, (int8_t*[]) {
-        (int8_t[]){1, 2},
-        (int8_t[]){3, 4}
+int test_multiplying_scattered_matrices(simplepim_management_t* table_management) {
+    Matrix* mat1 = matrix_create_from_2d_array(4, 4, (int8_t*[]) {
+        (int8_t[]){1, 2, 3, 4},
+        (int8_t[]){5, 6, 7, 8},
+        (int8_t[]){9, 10, 11, 12},
+        (int8_t[]){13, 14, 15, 16}
     });
-    Matrix* mat2 = matrix_create(2, 2, (int8_t*[]) {
-        (int8_t[]){5, 6},
-        (int8_t[]){7, 8}
+    Matrix* mat2 = matrix_create_from_2d_array(4, 4, (int8_t*[]) {
+        (int8_t[]){1, 2, 3, 4},
+        (int8_t[]){5, 6, 7, 8},
+        (int8_t[]){9, 10, 11, 12},
+        (int8_t[]){13, 14, 15, 16}
     });
     ASSERT_TRUE(mat1 != NULL && mat2 != NULL, "Matrix creation failed");
-    pim_matrix_handle_t* handle1 = scatter_matrix_to_pim(mat1, 1, 1);
-    pim_matrix_handle_t* handle2 = scatter_matrix_to_pim(mat2, 1, 1);
+    pim_matrix_handle_t* handle1 = scatter_matrix_to_pim(mat1, 4, 2, table_management);
+    pim_matrix_handle_t* handle2 = scatter_matrix_to_pim(mat2, 2, 4, table_management);
     ASSERT_TRUE(handle1 != NULL && handle2 != NULL, "Scatter to PIM failed");
-    pim_matrix_handle_t* result_handle = multiply_pim_matrices(handle1, handle2);
+    pim_matrix_handle_t* result_handle = multiply_pim_matrices(handle1, handle2, table_management);
     ASSERT_TRUE(result_handle != NULL, "Multiply PIM matrices failed");
-    Matrix* result = gather_matrix_from_pim(result_handle->pim_handle, mat1->rows, mat1->cols);
+    Matrix* result = gather_matrix_from_pim(result_handle, mat1->rows, mat1->cols, table_management);
     ASSERT_TRUE(result != NULL, "Gather from PIM failed");
-    Matrix* expected = matrix_create(2, 2, (int8_t*[]) {
-        (int8_t[]){19, 22},
-        (int8_t[]){43, 50}
+    Matrix* expected = matrix_create_from_2d_array(4, 4, (int8_t*[]) {
+        (int8_t[]){250, 260, 270, 280},
+        (int8_t[]){618, 644, 670, 696},
+        (int8_t[]){986, 1028, 1070, 1112},
+        (int8_t[]){1354, 1412, 1470, 1528}
     });
     ASSERT_TRUE(matrix_compare(result, expected), "Result matrix should match expected");
     matrix_free(mat1);
     matrix_free(mat2);
     matrix_free(result);
     matrix_free(expected);
-    free_pim_matrix_handle(handle1);
-    free_pim_matrix_handle(handle2);
-    free_pim_matrix_handle(result_handle);
+    free_pim_matrix_handle(handle1, table_management);
+    free_pim_matrix_handle(handle2, table_management);
+    free_pim_matrix_handle(result_handle, table_management);
     return 0;
 }
 
 int main() {
     int fails = 0;
-    fails += test_pim_broadcast_gather();
-    fails += test_pim_broadcast_free();
-    fails += test_pim_scatter_gather();
-    fails += test_pim_add_matrices();
-    fails += test_pim_multiply_matrices();
+    simplepim_management_t* table_management = table_management_init(4);
+    fails += test_pim_broadcast_gather(table_management);
+    fails += test_pim_broadcast_free(table_management);
+    fails += test_pim_scatter_gather(table_management);
+    fails += test_pim_broadcast_multiple_scatter_gather(table_management);
+    fails += test_pim_multiply_matrices(table_management);
+    fails += test_multiplying_scattered_matrices(table_management);
     if (fails == 0) {
         printf("[PASS] All PIM matrix tests passed!\n");
         return 0;

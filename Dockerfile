@@ -22,7 +22,7 @@ RUN wget http://sdk-releases.upmem.com/2025.1.0/ubuntu_22.04/upmem-2025.1.0-Linu
     rm upmem-2025.1.0-Linux-x86_64.tar.gz
 
 # Install Python dependencies
-RUN pip3 install --upgrade pip && pip3 install pyyaml
+RUN pip3 install --upgrade pip && pip3 install pyyaml psutil
 
 # Set environment variables for UPMEM SDK
 ENV PKG_CONFIG_PATH="/opt/upmem-2025.1.0-Linux-x86_64/share/pkgconfig"

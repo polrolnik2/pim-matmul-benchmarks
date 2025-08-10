@@ -9,8 +9,14 @@ BIN_DIR := $(ROOT)/bin
 DEPS_YAML := $(ROOT)/defn/dependencies.yaml
 DEPS_SRCS := $(shell python3 -c "import yaml,sys; print(' '.join('$(ROOT)/'+s for s in yaml.safe_load(open('$(DEPS_YAML)'))['sources']))" 2>/dev/null || echo "")
 INCLUDE_DIRS := $(shell python3 -c "import yaml; print(' '.join('-I$(ROOT)/'+d for d in yaml.safe_load(open('$(DEPS_YAML)'))['include_dirs']))" 2>/dev/null || echo "")
+
+# Extract all runtime parameters as compiler flags
+PARAMS_YAML := $(ROOT)/defn/params.yaml
+RUNTIME_PARAM_FLAGS := $(shell python3 -c "import yaml; params=yaml.safe_load(open('$(PARAMS_YAML)')); print(' '.join([f'-D{k}={v}' for item in params.get('runtime_params', []) for k, v in item.items()]))" 2>/dev/null || echo "")
+
 CFLAGS += $(INCLUDE_DIRS)
-CFLAGS += -Icommon/ 
+CFLAGS += -Icommon/
+CFLAGS += $(RUNTIME_PARAM_FLAGS)
 
 run:
 	@if [ -z "$(FILE)" ]; then \
