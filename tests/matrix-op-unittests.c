@@ -442,8 +442,8 @@ int test_matrix_add_rows_cols_error_cases() {
     ASSERT_TRUE(result == NULL, "Add rows with NULL matrix should fail");
     
     result = matrix_add_rows(m, 0, NULL);
-    ASSERT_TRUE(result == NULL, "Add 0 rows should fail");
-    
+    ASSERT_TRUE(matrix_compare(result, m), "Add 0 rows should return the same matrix");
+
     result = matrix_add_rows(m, -1, NULL);
     ASSERT_TRUE(result == NULL, "Add negative rows should fail");
     
@@ -451,8 +451,8 @@ int test_matrix_add_rows_cols_error_cases() {
     ASSERT_TRUE(result == NULL, "Add cols with NULL matrix should fail");
     
     result = matrix_add_cols(m, 0, NULL);
-    ASSERT_TRUE(result == NULL, "Add 0 cols should fail");
-    
+    ASSERT_TRUE(matrix_compare(result, m), "Add 0 cols should return the same matrix");
+
     result = matrix_add_cols(m, -1, NULL);
     ASSERT_TRUE(result == NULL, "Add negative cols should fail");
     

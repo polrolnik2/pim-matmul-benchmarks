@@ -441,7 +441,12 @@ Matrix* matrix_join_by_cols(Matrix** submatrices, int num_submatrices) {
 }
 
 Matrix* matrix_add_rows(const Matrix* mat, int16_t num_rows, const void* fill_value) {
-    if (!mat || num_rows <= 0) return NULL;
+    if (!mat || num_rows < 0) return NULL;
+
+    if (num_rows == 0) {
+        // If no rows to add, return a clone of the original matrix
+        return matrix_clone(mat);
+    }
     
     int16_t new_rows = mat->rows + num_rows;
     int16_t cols = mat->cols;
@@ -504,7 +509,12 @@ Matrix* matrix_add_rows(const Matrix* mat, int16_t num_rows, const void* fill_va
 }
 
 Matrix* matrix_add_cols(const Matrix* mat, int16_t num_cols, const void* fill_value) {
-    if (!mat || num_cols <= 0) return NULL;
+    if (!mat || num_cols < 0) return NULL;
+
+    if (num_cols == 0) {
+        // If no columns to add, return a clone of the original matrix
+        return matrix_clone(mat);
+    }
     
     int16_t rows = mat->rows;
     int16_t new_cols = mat->cols + num_cols;
