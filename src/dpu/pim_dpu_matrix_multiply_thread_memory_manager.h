@@ -97,7 +97,7 @@ int pim_dpu_matrix_multiply_thread_memory_manager(__mram_ptr void* inputs1, __mr
     uint32_t result_cols = config->result_cols;
     
     // Validate matrix dimensions for multiplication
-    if (matrix1_cols != matrix2_rows) {
+    if (matrix1_cols != matrix2_cols) {
         if (pid == 0) {
             printf("Error: Matrix dimensions incompatible for multiplication (matrix1_cols=%u != matrix2_rows=%u)\n", 
                    matrix1_cols, matrix2_rows);
@@ -210,7 +210,7 @@ int pim_dpu_matrix_multiply_thread_memory_manager(__mram_ptr void* inputs1, __mr
         mutex_lock(matrix2_mutex);
         if (!global_matrix2_col_fetched[result_col]) {
             // Allocate WRAM for this column using FSB allocator
-            uint32_t col_size = matrix2_rows * input_type2;
+            uint32_t col_size = matrix2_cols * input_type2;
             global_matrix2_col_allocators[result_col] = fsb_alloc(col_size, 1);
             global_matrix2_cols[result_col] = (uint8_t*)fsb_get(global_matrix2_col_allocators[result_col]);
             if (global_matrix2_cols[result_col] == NULL) {
@@ -257,7 +257,6 @@ int pim_dpu_matrix_multiply_thread_memory_manager(__mram_ptr void* inputs1, __mr
         mram_write(global_result_matrix, outputs, result_size);
         printf("Thread 0: Completed writing %u result elements (%u bytes)\n", 
                result_rows * result_cols, result_size);
-        
         // Free allocated WRAM memory using FSB allocators
         fsb_free(global_result_allocator, global_result_matrix);
         for (uint32_t i = 0; i < matrix1_rows; i++) {

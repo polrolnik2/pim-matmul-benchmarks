@@ -678,3 +678,9 @@ Matrix* matrix_extract_submatrix(const Matrix* mat, int16_t target_rows, int16_t
     
     return result;
 }
+
+Matrix * matrix_transpose(const Matrix * mat) {
+    if (!mat) return NULL;
+    void * data = matrix_get_data_row_major(mat);
+    return matrix_create_from_column_major_array(mat->cols, mat->rows, data, mat->element_size);
+}

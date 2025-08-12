@@ -3,7 +3,7 @@
 
 sources:
   - src/matrix.c
-  - src/pim_matrix_handle.c
+  - src/pim_matrix_multiplication_frame.c
   - lib/simplepim/processing/ProcessingHelperHost.c
   - lib/simplepim/communication/CommHelper.c
   - lib/simplepim/communication/CommOps.c

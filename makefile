@@ -60,7 +60,7 @@ run-unittests: docker-build SimplePIM bin build-dpu
 	python3 scripts/parse_unittest_logs.py
 
 # Build DPU binaries
-build-dpu: bin
+build-dpu: docker-build bin
 	docker run --rm --platform linux/amd64 -v $(CURDIR):/workspace $(DOCKER_IMAGE) bash -c \
 		". /opt/upmem-2025.1.0-Linux-x86_64/upmem_env.sh simulator && \
 		. /workspace/source.me && \
