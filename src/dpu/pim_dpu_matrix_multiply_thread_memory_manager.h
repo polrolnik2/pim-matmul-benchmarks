@@ -160,6 +160,7 @@ int pim_dpu_matrix_multiply_thread_memory_manager(__mram_ptr void* inputs1, __mr
     uint32_t extra_elements = total_result_elements % num_tasklets;
     
     uint32_t start_element, end_element;
+    
     if (pid < extra_elements) {
         // Threads with extra elements
         start_element = pid * (elements_per_thread + 1);

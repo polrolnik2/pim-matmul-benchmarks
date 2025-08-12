@@ -110,8 +110,54 @@ int main() {
         if (matrix2_rows > 8) printf("... (%u more rows)\n", matrix2_rows - 8);
         
         printf("=== End Debug Output ===\n\n");
+
+        // Naive matrix multiplication (assuming uint8_t elements for simplicity)
+        if (matrix1_cols != matrix2_cols) {
+            printf("ERROR: Incompatible matrix dimensions for multiplication\n");
+        } else {
+            uint32_t result_size = result_rows * result_cols * result_type_size;
+            uint32_t aligned_result_size = ((result_size + 8 - (result_size % 8)));
+            uint16_t* result_wram = (uint16_t*)mem_alloc(aligned_result_size);
+            if (result_wram == NULL) {
+            printf("ERROR: Failed to allocate WRAM for result matrix\n");
+            } else {
+            // Zero the result matrix
+            for (uint32_t i = 0; i < aligned_result_size; i++) {
+                result_wram[i] = 0;
+            }
+            // Naive multiplication
+            for (uint32_t i = 0; i < matrix1_rows; i++) {
+                for (uint32_t j = 0; j < matrix2_cols; j++) {
+                uint32_t sum = 0;
+                for (uint32_t k = 0; k < matrix1_cols; k++) {
+                    uint8_t a = matrix1_wram[i * matrix1_cols + k];
+                    uint8_t b = matrix2_wram[j * matrix1_cols + k];
+                    sum += a * b;
+                }
+                result_wram[j * matrix1_rows + i] = (uint16_t)sum;
+                }
+            }
+            printf("\n=== Naive Result Matrix ===\n");
+            for (uint32_t i = 0; i < result_rows && i < 8; i++) {
+                printf("Row %u: ", i);
+                for (uint32_t j = 0; j < result_cols && j < 16; j++) {
+                uint32_t idx = i * result_cols + j;
+                printf("%02x ", result_wram[idx]);
+                }
+                if (result_cols > 16) printf("... (%u more cols)", result_cols - 16);
+                printf("\n");
+            }
+            if (result_rows > 8) printf("... (%u more rows)\n", result_rows - 8);
+            printf("=== End Naive Result ===\n\n");
+
+            // Write result matrix back to MRAM
+            __mram_ptr void* result_mram = DPU_MRAM_HEAP_POINTER + result_start_offset;
+            printf("Writing result matrix to MRAM address %p...\n", result_mram);
+            mram_write(result_wram, result_mram, aligned_result_size);
+            }
+        }
     }
-    
+
     // Wait for debug output to complete
     barrier_wait(&my_barrier);
     
@@ -128,13 +174,13 @@ int main() {
     };
     
     // Call the memory manager to handle matrix multiplication
-    return pim_dpu_matrix_multiply_thread_memory_manager(
-        DPU_MRAM_HEAP_POINTER + matrix1_start_offset,
-        DPU_MRAM_HEAP_POINTER + matrix2_start_offset,
-        DPU_MRAM_HEAP_POINTER + result_start_offset,
-        matrix1_type_size,
-        matrix2_type_size,
-        result_type_size,
-        &config
-    );
+    // return pim_dpu_matrix_multiply_thread_memory_manager(
+    //     DPU_MRAM_HEAP_POINTER + matrix1_start_offset,
+    //     DPU_MRAM_HEAP_POINTER + matrix2_start_offset,
+    //     DPU_MRAM_HEAP_POINTER + result_start_offset,
+    //     matrix1_type_size,
+    //     matrix2_type_size,
+    //     result_type_size,
+    //     &config
+    // );
 }
