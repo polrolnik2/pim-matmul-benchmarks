@@ -22,14 +22,6 @@ RUNTIME_PARAM_FLAGS := $(shell python3 -c "import yaml; params=yaml.safe_load(op
 CFLAGS += $(INCLUDE_DIRS)
 CFLAGS += $(RUNTIME_PARAM_FLAGS)
 
-SimplePIM:
-	@if [ ! -d lib/simplepim ]; then \
-		git clone --depth 1 --filter=blob:none --sparse https://github.com/CMU-SAFARI/SimplePIM.git lib/simplepim && \
-		cd lib/simplepim && git sparse-checkout set lib && \
-		mv lib/simplepim/lib/* lib/simplepim/ && \
-		rm -rf lib/simplepim/lib; \
-	fi
-
 clean:
 	rm -rf lib/simplepim
 	rm -rf $(BIN_DIR)
@@ -47,7 +39,7 @@ bin:
 
 build-unittests: $(UNITTEST_BINS)
 
-run-unittests: docker-build SimplePIM bin build-dpu
+run-unittests: docker-build bin build-dpu
 	@mkdir -p scratch; \
 	set -e; \
 	for t in $(UNITTEST_SRCS); do \
