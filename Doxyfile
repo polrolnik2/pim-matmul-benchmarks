@@ -1,0 +1,78 @@
+# Doxyfile for PIM Matrix Multiplication Benchmarks
+
+# Project information
+PROJECT_NAME           = "PIM Matrix Multiplication Benchmarks"
+PROJECT_NUMBER         = "1.0"
+PROJECT_BRIEF          = "Processing-in-Memory matrix multiplication benchmarks and framework"
+
+# Input settings
+INPUT                  = src tests
+RECURSIVE              = YES
+FILE_PATTERNS          = *.c *.h *.cpp *.hpp
+
+# Output settings
+OUTPUT_DIRECTORY       = docs
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+HTML_OUTPUT            = html
+
+# Extraction settings
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = YES
+EXTRACT_STATIC         = YES
+EXTRACT_LOCAL_CLASSES  = YES
+EXTRACT_LOCAL_METHODS  = YES
+
+# Source browsing
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = NO
+STRIP_CODE_COMMENTS    = YES
+
+# Documentation features
+JAVADOC_AUTOBRIEF      = YES
+QT_AUTOBRIEF           = YES
+MULTILINE_CPP_IS_BRIEF = NO
+
+# Diagrams and graphs
+HAVE_DOT               = YES
+CALL_GRAPH             = YES
+CALLER_GRAPH           = YES
+COLLABORATION_GRAPH    = YES
+INCLUDE_GRAPH          = YES
+INCLUDED_BY_GRAPH      = YES
+CLASS_GRAPH            = YES
+HIDE_UNDOC_RELATIONS   = NO
+
+# Search functionality
+SEARCHENGINE           = YES
+
+# Warnings
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = YES
+WARN_IF_DOC_ERROR      = YES
+WARN_NO_PARAMDOC       = NO
+
+# File exclusions
+EXCLUDE_PATTERNS       = */build/* \
+                         */bin/* \
+                         */scratch/* \
+                         */lib/*
+
+# Preprocessing
+ENABLE_PREPROCESSING   = YES
+MACRO_EXPANSION        = YES
+EXPAND_ONLY_PREDEF     = NO
+SEARCH_INCLUDES        = YES
+INCLUDE_PATH           = src
+
+# HTML customization
+HTML_HEADER            = 
+HTML_FOOTER            = 
+HTML_STYLESHEET        = 
+HTML_COLORSTYLE_HUE    = 220
+HTML_COLORSTYLE_SAT    = 100
+HTML_COLORSTYLE_GAMMA  = 80
+
+# Advanced options
+OPTIMIZE_OUTPUT_FOR_C  = YES
+TYPEDEF_HIDES_STRUCT   = NO

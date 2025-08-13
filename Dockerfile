@@ -11,6 +11,7 @@ RUN apt-get update && \
     add-apt-repository ppa:deadsnakes/ppa && \
     apt-get update && \
     apt-get install -y build-essential \
+    apt-get install -y Doxygen \
     python3 python3-pip python3.7-dev \
     wget sudo git pkg-config gdb gdb-multiarch \
     libelf-dev libnuma-dev libgomp1 && \
