@@ -3,3 +3,7 @@ This project implements a framework for multiplying matrices using UPMEM PIM - a
 ---
 
 Make build and run targets can be viewed with ```make help```
+
+--- 
+
+For implementing the framework provided here in your project - refer to the inline API documentation or Doxygen docs.
