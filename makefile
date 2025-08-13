@@ -1,6 +1,14 @@
 # Docker image name
 DOCKER_IMAGE := pim-matmul-dev
 
+help:
+	@echo "Available targets:"
+	@echo "  make docker-build - Build the Docker image"
+	@echo "  make SimplePIM - Clone SimplePIM library if not present"
+	@echo "  make build-dpu - Build DPU binaries"
+	@echo "  make run-unittests - Run unittests in Docker"
+	@echo "  make clean - Clean up build artifacts"
+
 # Build the Docker image
 docker-build:
 	docker build -q --platform linux/amd64 -t $(DOCKER_IMAGE) .
@@ -45,9 +53,7 @@ UNITTEST_BINS := $(addprefix bin/,$(basename $(notdir $(UNITTEST_SRCS))))
 bin:
 	@mkdir -p bin
 
-build-unittests: $(UNITTEST_BINS)
-
-run-unittests: docker-build SimplePIM bin build-dpu
+run-unittests: docker-build bin build-dpu
 	@mkdir -p scratch; \
 	set -e; \
 	for t in $(UNITTEST_SRCS); do \
