@@ -216,6 +216,11 @@ Matrix* matrix_remove_cols(const Matrix* mat, int16_t num_cols);
  */
 Matrix* matrix_extract_submatrix(const Matrix* mat, int16_t target_rows, int16_t target_cols);
 
+/**
+ * @brief Transpose a matrix (swap rows and columns).
+ * @param mat Pointer to Matrix to transpose.
+ * @return Pointer to new transposed Matrix (caller must free), or NULL on failure.
+ */
 Matrix* matrix_transpose(const Matrix* mat);
 
 // Type-safe helper macros for common data types
