@@ -8,7 +8,7 @@ PROJECT_BRIEF          = "Processing-in-Memory matrix multiplication benchmarks 
 # Input settings
 INPUT                  = src tests
 RECURSIVE              = YES
-FILE_PATTERNS          = *.c *.h *.cpp *.hpp
+FILE_PATTERNS          = *.h
 
 # Output settings
 OUTPUT_DIRECTORY       = docs
@@ -16,12 +16,12 @@ GENERATE_HTML          = YES
 GENERATE_LATEX         = NO
 HTML_OUTPUT            = html
 
-# Extraction settings
-EXTRACT_ALL            = YES
-EXTRACT_PRIVATE        = YES
-EXTRACT_STATIC         = YES
-EXTRACT_LOCAL_CLASSES  = YES
-EXTRACT_LOCAL_METHODS  = YES
+EXTRACT_PUBLIC         = YES
+EXTRACT_PROTECTED      = NO
+EXTRACT_PRIVATE        = NO
+EXTRACT_STATIC         = NO
+EXTRACT_LOCAL_CLASSES  = NO
+EXTRACT_LOCAL_METHODS  = NO
 
 # Source browsing
 SOURCE_BROWSER         = YES
