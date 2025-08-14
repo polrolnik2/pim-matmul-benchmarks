@@ -126,15 +126,15 @@ int main() {
                 result_wram[i] = 0;
             }
             // Naive multiplication
-            for (uint32_t i = 0; i < matrix1_rows; i++) {
-                for (uint32_t j = 0; j < matrix2_cols; j++) {
+            for (uint32_t i = 0; i < result_rows; i++) {
+                for (uint32_t j = 0; j < result_cols; j++) {
                 uint32_t sum = 0;
                 for (uint32_t k = 0; k < matrix1_cols; k++) {
                     uint8_t a = matrix1_wram[i * matrix1_cols + k];
                     uint8_t b = matrix2_wram[j * matrix1_cols + k];
                     sum += a * b;
                 }
-                result_wram[j * matrix1_rows + i] = (uint16_t)sum;
+                result_wram[i*result_cols + j] = (uint16_t)sum;
                 }
             }
             printf("\n=== Naive Result Matrix ===\n");

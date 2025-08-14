@@ -103,8 +103,8 @@ pim_matrix_multiplication_frame_t* create_pim_matrix_multiplication_frame(uint32
 
     uint32_t matrix1_rows_aligned = matrix1_rows + (frame->work_group_size - (matrix1_rows % frame->work_group_size)) % frame->work_group_size;
     uint32_t matrix1_rows_transfer_aligned = matrix1_rows_aligned + calculate_pad_rows(matrix1_rows_aligned, frame->matrix1_type_size);
-    uint32_t matrix1_cols_aligned = matrix1_cols + (frame->work_group_size - (matrix1_cols % frame->work_group_size)) % frame->work_group_size;
-    uint32_t matrix1_size_aligned = matrix1_rows_transfer_aligned * matrix1_cols_aligned * matrix1_type_size;
+    uint32_t matrix1_cols_transfer_aligned = matrix1_cols + calculate_pad_cols(matrix1_cols, frame->matrix1_type_size);
+    uint32_t matrix1_size_aligned = matrix1_rows_transfer_aligned * matrix1_cols_transfer_aligned * matrix1_type_size;
     curr_offset += matrix1_size_aligned / frame->num_work_groups;
     frame->matrix2_start_offset = curr_offset;
 
@@ -217,14 +217,16 @@ void pim_matrix_multiplication_frame_execute(pim_matrix_multiplication_frame_t* 
     input_args.matrix1_start_offset = frame->matrix1_start_offset;
     input_args.matrix2_start_offset = frame->matrix2_start_offset;
     input_args.result_start_offset = frame->result_start_offset;
-    uint32_t matrix1_split_rows = (frame->matrix1_rows + (frame->work_group_size - (frame->matrix1_rows % frame->work_group_size)) % frame->work_group_size) / frame->work_group_size;
+    uint32_t matrix1_split_rows = (frame->result_rows + ((frame->work_group_size - (frame->result_rows % frame->work_group_size)) % frame->work_group_size)) / frame->work_group_size;
     input_args.matrix1_rows = calculate_pad_rows(matrix1_split_rows, frame->matrix1_type_size) + matrix1_split_rows;
     input_args.matrix1_cols = calculate_pad_cols(frame->matrix1_cols, frame->matrix1_type_size) + frame->matrix1_cols;
     input_args.matrix2_cols = calculate_pad_rows(frame->matrix2_rows, frame->matrix2_type_size) + frame->matrix2_rows;
-    uint32_t matrix2_split_cols = (frame->matrix2_cols + (frame->num_work_groups - (frame->matrix2_cols % frame->num_work_groups)) % frame->num_work_groups) / frame->num_work_groups;
+    uint32_t matrix2_split_cols = (frame->matrix2_cols + ((frame->num_work_groups - (frame->matrix2_cols % frame->num_work_groups)) % frame->num_work_groups)) / frame->num_work_groups;
     input_args.matrix2_rows = calculate_pad_cols(matrix2_split_cols, frame->matrix2_type_size) + matrix2_split_cols;
-    input_args.result_rows = calculate_pad_rows(matrix1_split_rows, frame->result_type_size) + matrix1_split_rows;
-    input_args.result_cols = calculate_pad_cols(matrix2_split_cols, frame->result_type_size) + matrix2_split_cols;
+    uint32_t result_rows_frame_aligned = ((frame->result_rows + (frame->work_group_size - (frame->result_rows % frame->work_group_size)) % frame->work_group_size)) / frame->work_group_size;
+    uint32_t result_cols_frame_aligned = ((frame->result_cols + (frame->num_work_groups - (frame->result_cols % frame->num_work_groups)) % frame->num_work_groups)) / frame->num_work_groups;
+    input_args.result_rows = result_rows_frame_aligned + calculate_pad_rows(result_rows_frame_aligned, frame->result_type_size);
+    input_args.result_cols = result_cols_frame_aligned + calculate_pad_cols(result_cols_frame_aligned, frame->result_type_size);
     input_args.matrix1_type_size = frame->matrix1_type_size;
     input_args.matrix2_type_size = frame->matrix2_type_size;
     input_args.result_type_size = frame->result_type_size;
@@ -252,11 +254,13 @@ Matrix * pim_matrix_multiplication_frame_get_result(pim_matrix_multiplication_fr
     void *** submatrices_data = (void**)malloc(frame->work_group_size * sizeof(void*));
     bool * submatrices_row_populated = (bool*)malloc(frame->work_group_size * sizeof(bool));
 
-    uint32_t result_rows_frame_aligned = (frame->result_rows + (frame->work_group_size - (frame->result_rows % frame->work_group_size)) % frame->work_group_size) / frame->work_group_size;
-    uint32_t result_cols_frame_aligned = (frame->result_cols + (frame->num_work_groups - (frame->result_cols % frame->num_work_groups)) % frame->num_work_groups) / frame->num_work_groups;
+    uint32_t result_rows_frame_aligned = ((frame->result_rows + (frame->work_group_size - (frame->result_rows % frame->work_group_size)) % frame->work_group_size)) / frame->work_group_size;
+    uint32_t result_cols_frame_aligned = ((frame->result_cols + (frame->num_work_groups - (frame->result_cols % frame->num_work_groups)) % frame->num_work_groups)) / frame->num_work_groups;
     uint32_t result_rows_dpu_transfer_aligned = result_rows_frame_aligned + calculate_pad_rows(result_rows_frame_aligned, frame->result_type_size);
     uint32_t result_cols_dpu_transfer_aligned = result_cols_frame_aligned + calculate_pad_cols(result_cols_frame_aligned, frame->result_type_size);
     uint32_t result_size_aligned = result_rows_dpu_transfer_aligned * result_cols_dpu_transfer_aligned * frame->matrix2_type_size;
+    printf("Result matrix size: %u rows, %u cols, %u type size, total size: %u bytes\n",
+           result_rows_dpu_transfer_aligned, result_cols_dpu_transfer_aligned, frame->result_type_size, result_size_aligned);
     for (uint32_t i = 0; i < frame->work_group_size; i++) {
         submatrices_row_populated[i] = false;
     }
@@ -287,6 +291,7 @@ Matrix * pim_matrix_multiplication_frame_get_result(pim_matrix_multiplication_fr
                 free(row_submatrices);
                 return NULL;
             }
+            printf("Submatrix %d:%d for PIM frame\n%s", i, j, matrix_sprint(submatrices[i][j], "| %u |"));
             submatrices[i][j] = matrix_extract_submatrix(submatrices[i][j], result_rows_frame_aligned, result_cols_frame_aligned);
             if (!submatrices[i][j]) {
                 fprintf(stderr, "Failed to extract submatrix\n");
@@ -296,9 +301,9 @@ Matrix * pim_matrix_multiplication_frame_get_result(pim_matrix_multiplication_fr
                 return NULL;
             }
         }
-        row_submatrices[i] = matrix_join_by_cols(submatrices[i], frame->num_work_groups);
+        row_submatrices[i] = matrix_join_by_rows(submatrices[i], frame->work_group_size);
     }
-    Matrix * result = matrix_join_by_rows(row_submatrices, frame->work_group_size);
+    Matrix * result = matrix_join_by_cols(row_submatrices, frame->num_work_groups);
     result = matrix_extract_submatrix(result, frame->result_rows, frame->result_cols);
     return result;
 }
