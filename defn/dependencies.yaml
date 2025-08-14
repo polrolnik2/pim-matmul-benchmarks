@@ -3,15 +3,7 @@
 
 sources:
   - src/matrix.c
-  - src/pim_matrix_handle.c
-  - lib/simplepim/processing/ProcessingHelperHost.c
-  - lib/simplepim/communication/CommHelper.c
-  - lib/simplepim/communication/CommOps.c
-  - lib/simplepim/management/SmallTableInit.c
-  - lib/simplepim/management/Management.c
-  - lib/simplepim/processing/gen_red/GenRed.c
-  - lib/simplepim/processing/map/Map.c
-  - lib/simplepim/processing/zip/Zip.c
+  - src/pim_matrix_multiplication_frame.c
   
 include_dirs:
   - src/

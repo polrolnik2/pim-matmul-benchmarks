@@ -34,14 +34,6 @@ RUNTIME_PARAM_FLAGS := $(shell python3 -c "import yaml; params=yaml.safe_load(op
 CFLAGS += $(INCLUDE_DIRS)
 CFLAGS += $(RUNTIME_PARAM_FLAGS)
 
-SimplePIM:
-	@if [ ! -d lib/simplepim ]; then \
-		git clone --depth 1 --filter=blob:none --sparse https://github.com/CMU-SAFARI/SimplePIM.git lib/simplepim && \
-		cd lib/simplepim && git sparse-checkout set lib && \
-		mv lib/simplepim/lib/* lib/simplepim/ && \
-		rm -rf lib/simplepim/lib; \
-	fi
-
 clean:
 	rm -rf lib/simplepim
 	rm -rf $(BIN_DIR)
@@ -71,7 +63,7 @@ run-unittests: docker-build bin build-dpu
 	python3 scripts/parse_unittest_logs.py
 
 # Build DPU binaries
-build-dpu: bin
+build-dpu: docker-build bin
 	docker run --rm --platform linux/amd64 -v $(CURDIR):/workspace $(DOCKER_IMAGE) bash -c \
 		". /opt/upmem-2025.1.0-Linux-x86_64/upmem_env.sh simulator && \
 		. /workspace/source.me && \
