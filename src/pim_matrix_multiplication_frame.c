@@ -102,16 +102,22 @@ pim_matrix_multiplication_frame_t* create_pim_matrix_multiplication_frame(uint32
     frame->matrix1_start_offset = curr_offset;
 
     uint32_t matrix1_rows_aligned = matrix1_rows + (frame->work_group_size - (matrix1_rows % frame->work_group_size)) % frame->work_group_size;
-    uint32_t matrix1_size_aligned = matrix1_rows_aligned * matrix1_cols * matrix1_type_size;
+    uint32_t matrix1_rows_transfer_aligned = matrix1_rows_aligned + calculate_pad_rows(matrix1_rows_aligned, frame->matrix1_type_size);
+    uint32_t matrix1_cols_aligned = matrix1_cols + (frame->work_group_size - (matrix1_cols % frame->work_group_size)) % frame->work_group_size;
+    uint32_t matrix1_size_aligned = matrix1_rows_transfer_aligned * matrix1_cols_aligned * matrix1_type_size;
     curr_offset += matrix1_size_aligned / frame->num_work_groups;
     frame->matrix2_start_offset = curr_offset;
 
     uint32_t matrix2_cols_aligned = matrix2_cols + (frame->num_work_groups - (matrix2_cols % frame->num_work_groups)) % frame->num_work_groups;
-    uint32_t matrix2_size_aligned = matrix2_rows * matrix2_cols_aligned * matrix2_type_size;
+    uint32_t matrix2_rows_transfer_aligned = matrix2_rows + calculate_pad_rows(matrix2_rows, frame->matrix2_type_size);
+    uint32_t matrix2_cols_transfer_aligned = matrix2_cols_aligned + calculate_pad_cols(matrix2_cols_aligned, frame->matrix2_type_size);
+    uint32_t matrix2_size_aligned = matrix2_rows_transfer_aligned * matrix2_cols_transfer_aligned * matrix2_type_size;
     curr_offset += matrix2_size_aligned / frame->num_work_groups;
     frame->result_start_offset = curr_offset;
 
-    curr_offset += matrix1_rows_aligned * matrix2_cols_aligned * result_type_size / frame->num_dpus;
+    uint32_t result_rows_transfer_aligned = matrix1_rows_aligned + calculate_pad_rows(matrix1_rows_aligned, frame->result_type_size);
+    uint32_t result_cols_transfer_aligned = matrix2_cols_aligned + calculate_pad_cols(matrix2_cols_aligned, frame->result_type_size);
+    curr_offset += result_rows_transfer_aligned * result_cols_transfer_aligned * frame->result_type_size / frame->num_dpus;
     frame->mem_frame_end = curr_offset;
 
     frame->result_valid = false;
@@ -145,6 +151,7 @@ void pim_matrix_multiplication_frame_load_first_matrix(pim_matrix_multiplication
     DPU_FOREACH(frame->dpu_set, dpu, i) {
         if (!submatrices_data_populated[i % frame->work_group_size]) {
             submatrices[i % frame->work_group_size] = matrix_align(submatrices[i % frame->work_group_size]);
+            printf("Aligned submatrix %d for PIM frame\n%s", i % frame->work_group_size, matrix_sprint(submatrices[i % frame->work_group_size], "| %u |"));
             if (!submatrices[i % frame->work_group_size]) {
                 fprintf(stderr, "Failed to align submatrix for PIM frame\n");
                 free(submatrices_data);
@@ -185,19 +192,18 @@ void pim_matrix_multiplication_frame_load_second_matrix(pim_matrix_multiplicatio
     DPU_FOREACH(frame->dpu_set, dpu, i) {
         if (!submatrices_data_populated[i / frame->work_group_size]) {
             submatrices[i / frame->work_group_size] = matrix_align(submatrices[i / frame->work_group_size]);
-            submatrices[i / frame->work_group_size] = matrix_transpose(submatrices[i / frame->work_group_size]);
             if (!submatrices[i / frame->work_group_size]) {
                 fprintf(stderr, "Failed to align submatrix for PIM frame\n");
                 free(submatrices_data);
                 return;
             }
-            submatrices_data[i / frame->work_group_size] = matrix_get_data_row_major(submatrices[i / frame->work_group_size]);
+            submatrices_data[i / frame->work_group_size] = matrix_get_data_column_major(submatrices[i / frame->work_group_size]);
             submatrices_data_populated[i / frame->work_group_size] = true;
         }
         DPU_ASSERT(dpu_prepare_xfer(dpu, submatrices_data[i / frame->work_group_size]));
     }
     uint32_t offset = frame->matrix2_start_offset;
-    uint32_t submatrix_size = submatrices[0]->rows * submatrices[0]->cols * frame->matrix1_type_size;
+    uint32_t submatrix_size = submatrices[0]->rows * submatrices[0]->cols * frame->matrix2_type_size;
     DPU_ASSERT(dpu_push_xfer(frame->dpu_set, DPU_XFER_TO_DPU, DPU_MRAM_HEAP_POINTER_NAME, offset, submatrix_size, DPU_XFER_DEFAULT));
     free(submatrices_data);
     free(submatrices);
@@ -281,7 +287,7 @@ Matrix * pim_matrix_multiplication_frame_get_result(pim_matrix_multiplication_fr
                 free(row_submatrices);
                 return NULL;
             }
-            submatrices[i][j] = matrix_extract_submatrix(submatrices[i][j], result_rows_dpu_transfer_aligned, result_cols_dpu_transfer_aligned);
+            submatrices[i][j] = matrix_extract_submatrix(submatrices[i][j], result_rows_frame_aligned, result_cols_frame_aligned);
             if (!submatrices[i][j]) {
                 fprintf(stderr, "Failed to extract submatrix\n");
                 free(submatrices_data);
