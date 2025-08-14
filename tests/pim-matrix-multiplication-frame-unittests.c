@@ -140,7 +140,7 @@ int test_pim_square_matrix_multiplication() {
 
 int test_pim_transfer_misaligned_matrix_multiplication() {
     printf("Running test_pim_frame_misaligned_matrix_multiplication...\n");
-    // Create two sample matrices 15x15
+    // Create two sample matrices 12x12
     uint16_t rows = 12, cols = 12;
     uint8_t data1[12*12], data2[12*12];
     for (int i = 0; i < rows; i++) {
