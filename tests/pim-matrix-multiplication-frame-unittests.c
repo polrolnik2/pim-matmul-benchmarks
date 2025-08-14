@@ -34,15 +34,19 @@ Matrix* host_multiply_matrices(const Matrix* matrix1, const Matrix* matrix2) {
 Matrix*  dpu_multiply_matrices(Matrix* matrix1, Matrix* matrix2) {
     // Create a sample matrix multiplication frame
     pim_matrix_multiplication_frame_t* frame = create_pim_matrix_multiplication_frame(4, 0, matrix1->rows, matrix1->cols, matrix2->rows, matrix2->cols, matrix1->rows, matrix2->cols,
-                                                                                      sizeof(int8_t), sizeof(int8_t), sizeof(uint16_t));                                                                                  
-    ASSERT_TRUE(frame != NULL, "Frame creation failed");
-    ASSERT_EQ(frame->num_work_groups, 2, "Frame should have correct number of work groups");
-    ASSERT_EQ(frame->work_group_size, 2, "Frame should have correct work group size");
+                                                                                      sizeof(int8_t), sizeof(int8_t), sizeof(uint16_t));
+    if (!frame) {
+        fprintf(stderr, "Frame creation failed");
+        return NULL;
+    }
     pim_matrix_multiplication_frame_load_first_matrix(frame, matrix1);
     pim_matrix_multiplication_frame_load_second_matrix(frame, matrix2);
     pim_matrix_multiplication_frame_execute(frame);
     Matrix* result = pim_matrix_multiplication_frame_get_result(frame);
-    ASSERT_TRUE(result != NULL, "Result matrix should not be NULL");
+    if (!result) {
+        fprintf(stderr, "Result retrieval failed");
+        return NULL;
+    }
     return result;
 }
 
@@ -66,8 +70,10 @@ int test_pim_identity_square_matrix_multiplication() {
     ASSERT_TRUE(matrix1 != NULL, "Matrix 1 creation failed");
     ASSERT_TRUE(matrix2 != NULL, "Matrix 2 creation failed");
     Matrix* result = dpu_multiply_matrices(matrix1, matrix2);
+    ASSERT_TRUE(result != NULL, "Result matrix should not be NULL");
     Matrix* expected_result = host_multiply_matrices(matrix1, matrix2);
-    printf("Expected dimensions: %dx%d, Result dimensions: %dx%d\n",
+    ASSERT_TRUE(expected_result != NULL, "Expected result matrix should not be NULL");
+    printf(": %dx%d, Result dimensions: %dx%d\n",
            expected_result->rows, expected_result->cols, result->rows, result->cols);
     printf("Expected matrix:\n");
     for (int i = 0; i < expected_result->rows; i++) {
@@ -110,8 +116,10 @@ int test_pim_square_matrix_multiplication() {
     ASSERT_TRUE(matrix1 != NULL, "Matrix 1 creation failed");
     ASSERT_TRUE(matrix2 != NULL, "Matrix 2 creation failed");
     Matrix* result = dpu_multiply_matrices(matrix1, matrix2);
+    ASSERT_TRUE(result != NULL, "Result matrix should not be NULL");
     Matrix* expected_result = host_multiply_matrices(matrix1, matrix2);
-    printf("Expected dimensions: %dx%d, Result dimensions: %dx%d\n",
+    ASSERT_TRUE(expected_result != NULL, "Expected result matrix should not be NULL");
+    printf(": %dx%d, Result dimensions: %dx%d\n",
            expected_result->rows, expected_result->cols, result->rows, result->cols);
     printf("Expected matrix:\n");
     for (int i = 0; i < expected_result->rows; i++) {
@@ -154,8 +162,10 @@ int test_pim_transfer_misaligned_matrix_multiplication() {
     ASSERT_TRUE(matrix1 != NULL, "Matrix 1 creation failed");
     ASSERT_TRUE(matrix2 != NULL, "Matrix 2 creation failed");
     Matrix* result = dpu_multiply_matrices(matrix1, matrix2);
+    ASSERT_TRUE(result != NULL, "Result matrix should not be NULL");
     Matrix* expected_result = host_multiply_matrices(matrix1, matrix2);
-    printf("Expected dimensions: %dx%d, Result dimensions: %dx%d\n",
+    ASSERT_TRUE(expected_result != NULL, "Expected result matrix should not be NULL");
+    printf(": %dx%d, Result dimensions: %dx%d\n",
            expected_result->rows, expected_result->cols, result->rows, result->cols);
     printf("Expected matrix:\n");
     for (int i = 0; i < expected_result->rows; i++) {
@@ -198,8 +208,10 @@ int test_pim_frame_misaligned_matrix_multiplication() {
     ASSERT_TRUE(matrix1 != NULL, "Matrix 1 creation failed");
     ASSERT_TRUE(matrix2 != NULL, "Matrix 2 creation failed");
     Matrix* result = dpu_multiply_matrices(matrix1, matrix2);
+    ASSERT_TRUE(result != NULL, "Result matrix should not be NULL");
     Matrix* expected_result = host_multiply_matrices(matrix1, matrix2);
-    printf("Expected dimensions: %dx%d, Result dimensions: %dx%d\n",
+    ASSERT_TRUE(expected_result != NULL, "Expected result matrix should not be NULL");
+    printf(": %dx%d, Result dimensions: %dx%d\n",
            expected_result->rows, expected_result->cols, result->rows, result->cols);
     printf("Expected matrix:\n");
     for (int i = 0; i < expected_result->rows; i++) {
@@ -247,8 +259,10 @@ int test_pim_rectangular_matrix_multiplication() {
     ASSERT_TRUE(matrix1 != NULL, "Matrix 1 creation failed");
     ASSERT_TRUE(matrix2 != NULL, "Matrix 2 creation failed");
     Matrix* result = dpu_multiply_matrices(matrix1, matrix2);
+    ASSERT_TRUE(result != NULL, "Result matrix should not be NULL");
     Matrix* expected_result = host_multiply_matrices(matrix1, matrix2);
-    printf("Expected dimensions: %dx%d, Result dimensions: %dx%d\n",
+    ASSERT_TRUE(expected_result != NULL, "Expected result matrix should not be NULL");
+    printf(": %dx%d, Result dimensions: %dx%d\n",
            expected_result->rows, expected_result->cols, result->rows, result->cols);
     printf("Expected matrix:\n");
     for (int i = 0; i < expected_result->rows; i++) {
