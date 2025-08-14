@@ -473,9 +473,9 @@ Matrix * pim_matrix_multiplication_frame_get_result(pim_matrix_multiplication_fr
                 return NULL;
             }
         }
-        row_submatrices[i] = matrix_join_by_rows(submatrices[i], frame->num_work_groups);
+        row_submatrices[i] = matrix_join_by_cols(submatrices[i], frame->num_work_groups);
     }
-    Matrix * result = matrix_join_by_cols(row_submatrices, frame->work_group_size);
+    Matrix * result = matrix_join_by_rows(row_submatrices, frame->work_group_size);
     if (!result) {
         fprintf(stderr, "Failed to join submatrices by columns\n");
         for (uint32_t i = 0; i < frame->work_group_size; i++) {
