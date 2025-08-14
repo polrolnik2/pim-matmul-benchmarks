@@ -10,7 +10,7 @@ RUN apt-get update && \
     apt-get install -y software-properties-common && \
     add-apt-repository ppa:deadsnakes/ppa && \
     apt-get update && \
-    apt-get install -y build-essential \
+    apt-get install -y build-essential doxygen \
     python3 python3-pip python3.7-dev \
     wget sudo git pkg-config gdb gdb-multiarch \
     libelf-dev libnuma-dev libgomp1 && \

@@ -1,6 +1,18 @@
 # Docker image name
 DOCKER_IMAGE := pim-matmul-dev
 
+help:
+	@echo "Available targets:"
+	@echo "  make docker-build - Build the Docker image"
+	@echo "  make SimplePIM - Clone SimplePIM library if not present"
+	@echo "  make build-dpu - Build DPU binaries"
+	@echo "  make run-unittests - Run unittests in Docker"
+	@echo "  make clean - Clean up build artifacts"
+	@echo "  make docs - Generate documentation"
+	@echo "  make docs-docker - Generate documentation in Docker"
+	@echo "  make docs-clean - Clean documentation"
+	@echo "  make docs-view - View documentation in browser"
+
 # Build the Docker image
 docker-build:
 	docker build -q --platform linux/amd64 -t $(DOCKER_IMAGE) .
@@ -26,6 +38,7 @@ clean:
 	rm -rf lib/simplepim
 	rm -rf $(BIN_DIR)
 	rm -rf $(PIM_MATMUL_BENCHMARKS_ROOT)/scratch/
+	rm -rf $(DOCS_DIR)
 
 BIN_DIR := bin
 
@@ -36,8 +49,6 @@ UNITTEST_BINS := $(addprefix bin/,$(basename $(notdir $(UNITTEST_SRCS))))
 # Ensure bin/ exists
 bin:
 	@mkdir -p bin
-
-build-unittests: $(UNITTEST_BINS)
 
 run-unittests: docker-build bin build-dpu
 	@mkdir -p scratch; \
@@ -58,4 +69,54 @@ build-dpu: docker-build bin
 		. /workspace/source.me && \
 		dpu-upmem-dpurte-clang -O2 $(RUNTIME_PARAM_FLAGS) -g -o /workspace/bin/matrix_multiply_dpu /workspace/src/dpu/pim_dpu_matrix_multiply.c -I src"
 
-.PHONY: SimplePIM clean build-unittests run-unittests build-dpu
+# Documentation directories
+DOCS_DIR := docs
+DOCS_HTML_DIR := $(DOCS_DIR)/html
+DOCS_LATEX_DIR := $(DOCS_DIR)/latex
+
+# Source files for documentation
+DOC_SOURCES := $(wildcard src/*.h) $(wildcard src/*.c) $(wildcard tests/*.h) $(wildcard tests/*.c)
+
+# Generate documentation with Doxygen
+docs: $(DOCS_HTML_DIR)/index.html
+
+$(DOCS_HTML_DIR)/index.html: $(DOC_SOURCES) Doxyfile
+	@mkdir -p $(DOCS_DIR)
+	doxygen Doxyfile
+
+# Generate Doxyfile if it doesn't exist
+Doxyfile:
+	doxygen -g
+	@echo "Generated default Doxyfile. You may want to customize it."
+	@echo "Key settings to consider:"
+	@echo "  - PROJECT_NAME = \"PIM Matrix Multiplication Benchmarks\""
+	@echo "  - INPUT = src tests"
+	@echo "  - RECURSIVE = YES"
+	@echo "  - GENERATE_HTML = YES"
+	@echo "  - GENERATE_LATEX = YES"
+	@echo "  - EXTRACT_ALL = YES"
+	@echo "  - EXTRACT_PRIVATE = YES"
+	@echo "  - EXTRACT_STATIC = YES"
+
+# Generate documentation in Docker environment
+docs-docker: docker-build
+	docker run --rm --platform linux/amd64 -v $(CURDIR):/workspace $(DOCKER_IMAGE) bash -c \
+		"cd /workspace && \
+		apt-get update -qq && apt-get install -y -qq doxygen graphviz && \
+		make docs"
+
+# Clean documentation
+docs-clean:
+	rm -rf $(DOCS_DIR)
+
+# View documentation (opens in default browser)
+docs-view: docs
+	@if command -v xdg-open > /dev/null; then \
+		xdg-open $(DOCS_HTML_DIR)/index.html; \
+	elif command -v open > /dev/null; then \
+		open $(DOCS_HTML_DIR)/index.html; \
+	else \
+		echo "Documentation generated at: $(DOCS_HTML_DIR)/index.html"; \
+	fi
+
+.PHONY: SimplePIM clean build-unittests run-unittests build-dpu docs docs-docker docs-clean docs-view
