@@ -31,9 +31,9 @@ Matrix* host_multiply_matrices(const Matrix* matrix1, const Matrix* matrix2) {
     return result;
 }
 
-Matrix*  dpu_multiply_matrices(Matrix* matrix1, Matrix* matrix2) {
+Matrix*  dpu_multiply_matrices(Matrix* matrix1, Matrix* matrix2, uint32_t num_dpus) {
     // Create a sample matrix multiplication frame
-    pim_matrix_multiplication_frame_t* frame = create_pim_matrix_multiplication_frame(4, 0, matrix1->rows, matrix1->cols, matrix2->rows, matrix2->cols, matrix1->rows, matrix2->cols,
+    pim_matrix_multiplication_frame_t* frame = create_pim_matrix_multiplication_frame(num_dpus, 0, matrix1->rows, matrix1->cols, matrix2->rows, matrix2->cols, matrix1->rows, matrix2->cols,
                                                                                       sizeof(int8_t), sizeof(int8_t), sizeof(uint16_t));
     if (!frame) {
         fprintf(stderr, "Frame creation failed");
@@ -69,7 +69,7 @@ int test_pim_identity_square_matrix_multiplication() {
     Matrix* matrix2 = matrix_create_from_row_major_array(rows, cols, (void*)data2, sizeof(uint8_t));
     ASSERT_TRUE(matrix1 != NULL, "Matrix 1 creation failed");
     ASSERT_TRUE(matrix2 != NULL, "Matrix 2 creation failed");
-    Matrix* result = dpu_multiply_matrices(matrix1, matrix2);
+    Matrix* result = dpu_multiply_matrices(matrix1, matrix2, 4);
     ASSERT_TRUE(result != NULL, "Result matrix should not be NULL");
     Matrix* expected_result = host_multiply_matrices(matrix1, matrix2);
     ASSERT_TRUE(expected_result != NULL, "Expected result matrix should not be NULL");
@@ -115,7 +115,7 @@ int test_pim_square_matrix_multiplication() {
     Matrix* matrix2 = matrix_create_from_row_major_array(rows, cols, (void*)data2, sizeof(uint8_t));
     ASSERT_TRUE(matrix1 != NULL, "Matrix 1 creation failed");
     ASSERT_TRUE(matrix2 != NULL, "Matrix 2 creation failed");
-    Matrix* result = dpu_multiply_matrices(matrix1, matrix2);
+    Matrix* result = dpu_multiply_matrices(matrix1, matrix2, 4);
     ASSERT_TRUE(result != NULL, "Result matrix should not be NULL");
     Matrix* expected_result = host_multiply_matrices(matrix1, matrix2);
     ASSERT_TRUE(expected_result != NULL, "Expected result matrix should not be NULL");
@@ -161,7 +161,7 @@ int test_pim_transfer_misaligned_matrix_multiplication() {
     Matrix* matrix2 = matrix_create_from_row_major_array(rows, cols, (void*)data2, sizeof(uint8_t));
     ASSERT_TRUE(matrix1 != NULL, "Matrix 1 creation failed");
     ASSERT_TRUE(matrix2 != NULL, "Matrix 2 creation failed");
-    Matrix* result = dpu_multiply_matrices(matrix1, matrix2);
+    Matrix* result = dpu_multiply_matrices(matrix1, matrix2, 4);
     ASSERT_TRUE(result != NULL, "Result matrix should not be NULL");
     Matrix* expected_result = host_multiply_matrices(matrix1, matrix2);
     ASSERT_TRUE(expected_result != NULL, "Expected result matrix should not be NULL");
@@ -207,7 +207,7 @@ int test_pim_frame_misaligned_matrix_multiplication() {
     Matrix* matrix2 = matrix_create_from_row_major_array(rows, cols, (void*)data2, sizeof(uint8_t));
     ASSERT_TRUE(matrix1 != NULL, "Matrix 1 creation failed");
     ASSERT_TRUE(matrix2 != NULL, "Matrix 2 creation failed");
-    Matrix* result = dpu_multiply_matrices(matrix1, matrix2);
+    Matrix* result = dpu_multiply_matrices(matrix1, matrix2, 4);
     ASSERT_TRUE(result != NULL, "Result matrix should not be NULL");
     Matrix* expected_result = host_multiply_matrices(matrix1, matrix2);
     ASSERT_TRUE(expected_result != NULL, "Expected result matrix should not be NULL");
@@ -258,7 +258,53 @@ int test_pim_rectangular_matrix_multiplication() {
     Matrix* matrix2 = matrix_create_from_row_major_array(rows2, cols2, (void*)data2, sizeof(uint8_t));
     ASSERT_TRUE(matrix1 != NULL, "Matrix 1 creation failed");
     ASSERT_TRUE(matrix2 != NULL, "Matrix 2 creation failed");
-    Matrix* result = dpu_multiply_matrices(matrix1, matrix2);
+    Matrix* result = dpu_multiply_matrices(matrix1, matrix2, 4);
+    ASSERT_TRUE(result != NULL, "Result matrix should not be NULL");
+    Matrix* expected_result = host_multiply_matrices(matrix1, matrix2);
+    ASSERT_TRUE(expected_result != NULL, "Expected result matrix should not be NULL");
+    printf(": %dx%d, Result dimensions: %dx%d\n",
+           expected_result->rows, expected_result->cols, result->rows, result->cols);
+    printf("Expected matrix:\n");
+    for (int i = 0; i < expected_result->rows; i++) {
+        for (int j = 0; j < expected_result->cols; j++) {
+            int16_t val;
+            matrix_get(expected_result, i, j, &val);
+            printf("| %d ", val);
+        }
+        printf("|\n");
+    }
+    printf("Result matrix:\n");
+    for (int i = 0; i < result->rows; i++) {
+        for (int j = 0; j < result->cols; j++) {
+            int16_t val;
+            matrix_get(result, i, j, &val);
+            printf("| %d ", val);
+        }
+        printf("|\n");
+    }
+    ASSERT_TRUE(result != NULL, "Result matrix should not be NULL");
+    ASSERT_TRUE(matrix_compare(result, expected_result), "Result matrix should match expected result");
+    matrix_free(matrix1);
+    matrix_free(matrix2);
+    return 0;
+}
+
+int test_pim_square_prime_number_of_dpus() {
+    printf("Running test_pim_square_matrix_multiplication...\n");
+    // Create two sample matrices 16x16
+    uint16_t rows = 16, cols = 16;
+    uint8_t data1[16*16], data2[16*16];
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            data1[i*cols + j] = i+j;
+            data2[i*cols + j] = i+j; 
+        }
+    }
+    Matrix* matrix1 = matrix_create_from_row_major_array(rows, cols, (void*)data1, sizeof(uint8_t));
+    Matrix* matrix2 = matrix_create_from_row_major_array(rows, cols, (void*)data2, sizeof(uint8_t));
+    ASSERT_TRUE(matrix1 != NULL, "Matrix 1 creation failed");
+    ASSERT_TRUE(matrix2 != NULL, "Matrix 2 creation failed");
+    Matrix* result = dpu_multiply_matrices(matrix1, matrix2, 3);
     ASSERT_TRUE(result != NULL, "Result matrix should not be NULL");
     Matrix* expected_result = host_multiply_matrices(matrix1, matrix2);
     ASSERT_TRUE(expected_result != NULL, "Expected result matrix should not be NULL");
@@ -297,6 +343,7 @@ int main() {
     fails += test_pim_transfer_misaligned_matrix_multiplication();
     fails += test_pim_frame_misaligned_matrix_multiplication();
     fails += test_pim_rectangular_matrix_multiplication();
+    fails += test_pim_square_prime_number_of_dpus();
     if (fails == 0) {
         printf("[PASS] All PIM matrix tests passed!\n");
         return 0;

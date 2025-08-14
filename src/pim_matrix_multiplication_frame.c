@@ -331,12 +331,13 @@ Matrix * pim_matrix_multiplication_frame_get_result(pim_matrix_multiplication_fr
         free(submatrices_data);
         return NULL;
     }
-
     uint32_t result_rows_frame_aligned = ((frame->result_rows + (frame->work_group_size - (frame->result_rows % frame->work_group_size)) % frame->work_group_size)) / frame->work_group_size;
     uint32_t result_cols_frame_aligned = ((frame->result_cols + (frame->num_work_groups - (frame->result_cols % frame->num_work_groups)) % frame->num_work_groups)) / frame->num_work_groups;
     uint32_t result_rows_dpu_transfer_aligned = result_rows_frame_aligned + calculate_pad_rows(result_rows_frame_aligned, frame->result_type_size);
     uint32_t result_cols_dpu_transfer_aligned = result_cols_frame_aligned + calculate_pad_cols(result_cols_frame_aligned, frame->result_type_size);
     uint32_t result_size_aligned = result_rows_dpu_transfer_aligned * result_cols_dpu_transfer_aligned * frame->matrix2_type_size;
+    uint32_t num_result_submatrices_rowwise = frame->work_group_size;
+    uint32_t num_result_submatrices_colwise = frame->num_work_groups;
     printf("Result matrix size: %u rows, %u cols, %u type size, total size: %u bytes\n",
            result_rows_frame_aligned, result_cols_frame_aligned, frame->result_type_size, result_size_aligned);
     for (uint32_t i = 0; i < frame->work_group_size; i++) {
@@ -345,11 +346,11 @@ Matrix * pim_matrix_multiplication_frame_get_result(pim_matrix_multiplication_fr
     uint32_t i;
     struct dpu_set_t dpu;
     DPU_FOREACH(frame->dpu_set, dpu, i) {
-        uint32_t col = i % frame->work_group_size;
-        uint32_t row = i / frame->work_group_size;
-        if (!submatrices_row_populated[i % frame->work_group_size]) {
-            submatrices_data[i % frame->work_group_size] = malloc(frame->num_work_groups * sizeof(void*));
-            if (!submatrices_data[i % frame->work_group_size]) {
+        uint32_t row = i % frame->work_group_size;
+        uint32_t col = i / frame->work_group_size;
+        if (!submatrices_row_populated[row]) {
+            submatrices_data[row] = malloc(frame->num_work_groups * sizeof(void*));
+            if (!submatrices_data[row]) {
                 fprintf(stderr, "Failed to allocate memory for submatrix data row\n");
                 // Clean up previously allocated memory
                 for (uint32_t cleanup_i = 0; cleanup_i < i; cleanup_i++) {
@@ -361,7 +362,7 @@ Matrix * pim_matrix_multiplication_frame_get_result(pim_matrix_multiplication_fr
                 free(submatrices_data);
                 return NULL;
             }
-            submatrices_row_populated[i % frame->work_group_size] = true;
+            submatrices_row_populated[row] = true;
         }
         submatrices_data[row][col] = malloc(result_rows_dpu_transfer_aligned * result_cols_dpu_transfer_aligned * frame->result_type_size);
         if (!submatrices_data[row][col]) {
@@ -472,9 +473,9 @@ Matrix * pim_matrix_multiplication_frame_get_result(pim_matrix_multiplication_fr
                 return NULL;
             }
         }
-        row_submatrices[i] = matrix_join_by_rows(submatrices[i], frame->work_group_size);
+        row_submatrices[i] = matrix_join_by_rows(submatrices[i], frame->num_work_groups);
     }
-    Matrix * result = matrix_join_by_cols(row_submatrices, frame->num_work_groups);
+    Matrix * result = matrix_join_by_cols(row_submatrices, frame->work_group_size);
     if (!result) {
         fprintf(stderr, "Failed to join submatrices by columns\n");
         for (uint32_t i = 0; i < frame->work_group_size; i++) {
