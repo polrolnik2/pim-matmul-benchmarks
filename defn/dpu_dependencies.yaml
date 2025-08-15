@@ -6,4 +6,3 @@ sources:
   
 include_dirs:
   - src/dpu/
-  - lib/simplepim/

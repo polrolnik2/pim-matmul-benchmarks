@@ -284,9 +284,9 @@ void pim_matrix_multiplication_frame_execute(pim_matrix_multiplication_frame_t* 
     uint32_t matrix1_split_rows = (frame->result_rows + ((frame->work_group_size - (frame->result_rows % frame->work_group_size)) % frame->work_group_size)) / frame->work_group_size;
     input_args.matrix1_rows = calculate_pad_rows(matrix1_split_rows, frame->matrix1_type_size) + matrix1_split_rows;
     input_args.matrix1_cols = calculate_pad_cols(frame->matrix1_cols, frame->matrix1_type_size) + frame->matrix1_cols;
-    input_args.matrix2_cols = calculate_pad_rows(frame->matrix2_rows, frame->matrix2_type_size) + frame->matrix2_rows;
+    input_args.matrix2_rows = calculate_pad_rows(frame->matrix2_rows, frame->matrix2_type_size) + frame->matrix2_rows;
     uint32_t matrix2_split_cols = (frame->matrix2_cols + ((frame->num_work_groups - (frame->matrix2_cols % frame->num_work_groups)) % frame->num_work_groups)) / frame->num_work_groups;
-    input_args.matrix2_rows = calculate_pad_cols(matrix2_split_cols, frame->matrix2_type_size) + matrix2_split_cols;
+    input_args.matrix2_cols = calculate_pad_cols(matrix2_split_cols, frame->matrix2_type_size) + matrix2_split_cols;
     uint32_t result_rows_frame_aligned = ((frame->result_rows + (frame->work_group_size - (frame->result_rows % frame->work_group_size)) % frame->work_group_size)) / frame->work_group_size;
     uint32_t result_cols_frame_aligned = ((frame->result_cols + (frame->num_work_groups - (frame->result_cols % frame->num_work_groups)) % frame->num_work_groups)) / frame->num_work_groups;
     input_args.result_rows = result_rows_frame_aligned + calculate_pad_rows(result_rows_frame_aligned, frame->result_type_size);
@@ -294,6 +294,13 @@ void pim_matrix_multiplication_frame_execute(pim_matrix_multiplication_frame_t* 
     input_args.matrix1_type_size = frame->matrix1_type_size;
     input_args.matrix2_type_size = frame->matrix2_type_size;
     input_args.result_type_size = frame->result_type_size;
+    input_args.wram_input_tile_size = 4096; // Size of input tile in WRAM
+    
+    // Set tile dimensions for DPU kernel
+    input_args.matrix1_tile_rows = input_args.matrix1_rows;
+    input_args.matrix1_tile_cols = input_args.matrix1_cols;
+    input_args.matrix2_tile_rows = input_args.matrix2_rows;
+    input_args.matrix2_tile_cols = input_args.matrix2_cols;
 
     DPU_FOREACH(frame->dpu_set, dpu) {
         DPU_ASSERT(dpu_prepare_xfer(dpu, &input_args));
