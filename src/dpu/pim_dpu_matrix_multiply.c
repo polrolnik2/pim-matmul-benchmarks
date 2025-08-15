@@ -29,11 +29,11 @@ MUTEX_INIT(log_mutex);
 
 BARRIER_INIT(my_barrier, NR_TASKLETS);
 
-static inline void load_A_tile_from_mram(__mram_ptr void *src, uint16_t *dst, size_t bytes) {
+static inline void load_A_tile_from_mram(__mram_ptr void *src, uint8_t *dst, size_t bytes) {
     mram_read(src, dst, bytes);
 }
 
-static inline void load_B_tile_from_mram(__mram_ptr void *src, uint16_t *dst, size_t bytes) {
+static inline void load_B_tile_from_mram(__mram_ptr void *src, uint8_t *dst, size_t bytes) {
     mram_read(src, dst, bytes);
 }
 
@@ -70,7 +70,8 @@ void compute_tile_tasklet(int tasklet_id, int n_tasklets,
         printf("Matrix 2 (B) tile:\n");
         for (int i = 0; i < k_tile; ++i) {
             for (int j = 0; j < n_tile; ++j) {
-                printf("%d ", matrix2_wram[buffer_idx][i * n_tile + j]);
+                // Matrix B is column-major: B[i][j] = B_buf[j * k_tile + i]
+                printf("%d ", matrix2_wram[buffer_idx][j * k_tile + i]);
             }
             printf("\n");
         }
@@ -81,17 +82,18 @@ void compute_tile_tasklet(int tasklet_id, int n_tasklets,
     printf("[DPU %d] Tasklet %d computing rows %d to %d of tile %dx%dx%d on buffer %d\n", 
            tasklet_id, effective_tasklet_id, row0, row_max, m_tile, n_tile, k_tile, buffer_idx);
     mutex_unlock(log_mutex);
-    uint16_t* A_buf = matrix1_wram[buffer_idx];
-    uint16_t* B_buf = matrix2_wram[buffer_idx];
+    uint8_t* A_buf = matrix1_wram[buffer_idx];
+    uint8_t* B_buf = matrix2_wram[buffer_idx];
     uint16_t* C_buf = result_wram[buffer_idx];
 
     for (int i = row0; i < row_max; ++i) {
         for (int j = 0; j < n_tile; ++j) {
             uint32_t sum = 0;
             for (int kk = 0; kk < k_tile; ++kk) {
-                sum += A_buf[i * k_tile + kk] * B_buf[kk * n_tile + j];
+                // Matrix B is column-major: B[kk][j] = B_buf[j * k_tile + kk]
+                sum += (uint32_t)A_buf[i * k_tile + kk] * (uint32_t)B_buf[j * k_tile + kk];
             }
-            C_buf[i * n_tile + j] += sum;
+            C_buf[i * n_tile + j] += (uint16_t)sum;
         }
     }
 
@@ -243,13 +245,16 @@ int main() {
                     }
                     
                     // Load new tiles into load_buffer
-                    __mram_ptr void *mram_addr_A = (__mram_ptr void *)(MATRIX_MULTIPLY_ARGUMENTS.matrix1_start_offset + 
+                    __mram_ptr void *mram_addr_A = (__mram_ptr void *)(MATRIX_MULTIPLY_ARGUMENTS.matrix1_start_offset + DPU_MRAM_HEAP_POINTER + 
                         (i * matrix1_tiles_colwise + k) * MATRIX_MULTIPLY_ARGUMENTS.wram_input_tile_size);
                     load_A_tile_from_mram(mram_addr_A, matrix1_wram[load_buffer], 
                                          MATRIX_MULTIPLY_ARGUMENTS.wram_input_tile_size);
-                    
-                    __mram_ptr void *mram_addr_B = (__mram_ptr void *)(MATRIX_MULTIPLY_ARGUMENTS.matrix2_start_offset + 
+                    printf("[DPU %d] Loaded A tile for [%d,%d] from MRAM addr:%p to buffer %d\n", 
+                           pid, i, k, mram_addr_A, load_buffer);
+                    __mram_ptr void *mram_addr_B = (__mram_ptr void *)(MATRIX_MULTIPLY_ARGUMENTS.matrix2_start_offset + DPU_MRAM_HEAP_POINTER + 
                         (k * matrix2_tiles_colwise + j) * MATRIX_MULTIPLY_ARGUMENTS.wram_input_tile_size);
+                    printf("[DPU %d] Loading B tile for [%d,%d] from MRAM addr:%p to buffer %d\n", 
+                           pid, k, j, mram_addr_B, load_buffer);
                     load_B_tile_from_mram(mram_addr_B, matrix2_wram[load_buffer], 
                                          MATRIX_MULTIPLY_ARGUMENTS.wram_input_tile_size);
                 }
@@ -309,14 +314,12 @@ int main() {
         printf("[DPU %d] Starting final writeback of remaining results\n", pid);
         for (int buf = 0; buf < 2; buf++) {
             if (result_wram_valid[buf]) {
-                printf("[DPU %d] Writing back buffer %d for tile [%d,%d]\n", 
-                       pid, buf, result_writeback_row_tile[buf], result_writeback_col_tile[buf]);
-                __mram_ptr void *result_mram_addr = (__mram_ptr void *)(MATRIX_MULTIPLY_ARGUMENTS.result_start_offset + 
+                __mram_ptr void *result_mram_addr = (__mram_ptr void *)(MATRIX_MULTIPLY_ARGUMENTS.result_start_offset + DPU_MRAM_HEAP_POINTER + 
                     (result_writeback_row_tile[buf] * result_tiles_colwise + 
                      result_writeback_col_tile[buf]) * MATRIX_MULTIPLY_ARGUMENTS.wram_input_tile_size);
-                // write_C_tile_to_mram(result_wram[buf], result_mram_addr, 
-                //                     MATRIX_MULTIPLY_ARGUMENTS.wram_input_tile_size);
-                // result_wram_valid[buf] = false;
+                write_C_tile_to_mram(result_wram[buf], result_mram_addr, 
+                                    2*MATRIX_MULTIPLY_ARGUMENTS.wram_input_tile_size);
+                result_wram_valid[buf] = false;
             }
         }
         printf("[DPU %d] Matrix multiplication kernel completed successfully\n", pid);
