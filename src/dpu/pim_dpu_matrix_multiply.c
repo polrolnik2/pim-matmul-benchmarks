@@ -236,7 +236,7 @@ int main() {
                 if (pid == 0) {
                     // Store previous results if they exist and are valid
                     if (!first_iteration && result_wram_valid[load_buffer]) {
-                        __mram_ptr void *result_mram_addr = (__mram_ptr void *)(MATRIX_MULTIPLY_ARGUMENTS.result_start_offset + 
+                        __mram_ptr void *result_mram_addr = (__mram_ptr void *)(MATRIX_MULTIPLY_ARGUMENTS.result_start_offset + DPU_MRAM_HEAP_POINTER + 
                             (result_writeback_row_tile[load_buffer] * result_tiles_colwise + 
                              result_writeback_col_tile[load_buffer]) * MATRIX_MULTIPLY_ARGUMENTS.wram_input_tile_size);
                         write_C_tile_to_mram(result_wram[load_buffer], result_mram_addr, 
@@ -308,6 +308,8 @@ int main() {
             }
         }
     }
+
+    barrier_wait(&my_barrier);
     
     // Final writeback of any remaining results
     if (pid == 0) {
