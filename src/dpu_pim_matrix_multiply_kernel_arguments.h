@@ -15,6 +15,8 @@ typedef struct {
     uint32_t matrix2_tile_cols;
     uint32_t result_rows;
     uint32_t result_cols;
+    uint32_t result_tile_rows;
+    uint32_t result_tile_cols;
     uint32_t matrix1_type_size;
     uint32_t matrix2_type_size;
     uint32_t result_type_size;

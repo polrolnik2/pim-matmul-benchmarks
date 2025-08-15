@@ -301,6 +301,8 @@ void pim_matrix_multiplication_frame_execute(pim_matrix_multiplication_frame_t* 
     input_args.matrix1_tile_cols = input_args.matrix1_cols;
     input_args.matrix2_tile_rows = input_args.matrix2_rows;
     input_args.matrix2_tile_cols = input_args.matrix2_cols;
+    input_args.result_tile_rows = input_args.result_rows;
+    input_args.result_tile_cols = input_args.result_cols;
 
     DPU_FOREACH(frame->dpu_set, dpu) {
         DPU_ASSERT(dpu_prepare_xfer(dpu, &input_args));

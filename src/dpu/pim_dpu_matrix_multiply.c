@@ -55,33 +55,7 @@ void compute_tile_tasklet(int tasklet_id, int n_tasklets,
     int rows_per_tasklet = (m_tile + computing_tasklets - 1) / computing_tasklets;
     int row0 = effective_tasklet_id * rows_per_tasklet;
     int row_max = (row0 + rows_per_tasklet) < m_tile ? (row0 + rows_per_tasklet) : m_tile;
-
-    if (tasklet_id == 1) {
-        printf("[DPU %d] Computing tile: %dx%dx%d on buffer %d (tasklets 1-%d)\n", 
-               tasklet_id, m_tile, n_tile, k_tile, buffer_idx, n_tasklets-1);
-        printf("Inputs:\n");
-        printf("Matrix 1 (A) tile:\n");
-        for (int i = 0; i < m_tile; ++i) {
-            for (int j = 0; j < k_tile; ++j) {
-                printf("%d ", matrix1_wram[buffer_idx][i * k_tile + j]);
-            }
-            printf("\n");
-        }
-        printf("Matrix 2 (B) tile:\n");
-        for (int i = 0; i < k_tile; ++i) {
-            for (int j = 0; j < n_tile; ++j) {
-                // Matrix B is column-major: B[i][j] = B_buf[j * k_tile + i]
-                printf("%d ", matrix2_wram[buffer_idx][j * k_tile + i]);
-            }
-            printf("\n");
-        }
-    }
-    barrier_wait(&my_barrier);
-
-    mutex_lock(log_mutex);
-    printf("[DPU %d] Tasklet %d computing rows %d to %d of tile %dx%dx%d on buffer %d\n", 
-           tasklet_id, effective_tasklet_id, row0, row_max, m_tile, n_tile, k_tile, buffer_idx);
-    mutex_unlock(log_mutex);
+    
     uint8_t* A_buf = matrix1_wram[buffer_idx];
     uint8_t* B_buf = matrix2_wram[buffer_idx];
     uint16_t* C_buf = result_wram[buffer_idx];
@@ -96,19 +70,6 @@ void compute_tile_tasklet(int tasklet_id, int n_tasklets,
             C_buf[i * n_tile + j] += (uint16_t)sum;
         }
     }
-
-    if (tasklet_id == 1) {
-        printf("[DPU %d] Tasklet %d finished computing rows %d to %d of tile %dx%dx%d on buffer %d\n", 
-            tasklet_id, effective_tasklet_id, row0, row_max, m_tile, n_tile, k_tile, buffer_idx);
-        printf("Result tile after computation:\n");
-        for (int i = row0; i < row_max; ++i) {
-            for (int j = 0; j < n_tile; ++j) {
-                printf("%d ", C_buf[i * n_tile + j]);
-            }
-            printf("\n");
-        }
-    }
-    barrier_wait(&my_barrier);
 }
 
 /**
@@ -121,11 +82,6 @@ void compute_tile_tasklet(int tasklet_id, int n_tasklets,
  */
 int main() {
     int pid = me();
-    
-    if (pid == 0) {
-        printf("[DPU %d] Starting matrix multiplication kernel\n", pid);
-        printf("[DPU %d] Tile size: %u bytes\n", pid, MATRIX_MULTIPLY_ARGUMENTS.wram_input_tile_size);
-    }
     
     // Initialize memory heap on tasklet 0
     if (pid == 0) {
@@ -161,11 +117,8 @@ int main() {
     
     barrier_wait(&my_barrier);
 
-    // Result tiles are partitioned using matrix1_tile_rows x matrix2_tile_cols blocks
-    uint16_t result_tile_rows = MATRIX_MULTIPLY_ARGUMENTS.matrix1_tile_rows;
-    uint16_t result_tile_cols = MATRIX_MULTIPLY_ARGUMENTS.matrix2_tile_cols;
-    uint16_t result_tiles_rowwise = MATRIX_MULTIPLY_ARGUMENTS.result_rows / result_tile_rows;
-    uint16_t result_tiles_colwise = MATRIX_MULTIPLY_ARGUMENTS.result_cols / result_tile_cols;
+    uint16_t result_tiles_rowwise = MATRIX_MULTIPLY_ARGUMENTS.result_rows / MATRIX_MULTIPLY_ARGUMENTS.result_tile_rows;
+    uint16_t result_tiles_colwise = MATRIX_MULTIPLY_ARGUMENTS.result_cols / MATRIX_MULTIPLY_ARGUMENTS.result_tile_cols;
 
     uint16_t matrix1_tiles_rowwise = MATRIX_MULTIPLY_ARGUMENTS.matrix1_rows / MATRIX_MULTIPLY_ARGUMENTS.matrix1_tile_rows;
     uint16_t matrix1_tiles_colwise = MATRIX_MULTIPLY_ARGUMENTS.matrix1_cols / MATRIX_MULTIPLY_ARGUMENTS.matrix1_tile_cols;
@@ -180,7 +133,7 @@ int main() {
         printf("[DPU %d]   matrix2_tile_rows=%d, matrix2_tile_cols=%d\n", 
                pid, MATRIX_MULTIPLY_ARGUMENTS.matrix2_tile_rows, MATRIX_MULTIPLY_ARGUMENTS.matrix2_tile_cols);
         printf("[DPU %d]   result_tile_rows=%d, result_tile_cols=%d\n", 
-               pid, result_tile_rows, result_tile_cols);
+               pid, MATRIX_MULTIPLY_ARGUMENTS.result_tile_rows, MATRIX_MULTIPLY_ARGUMENTS.result_tile_cols);
         printf("[DPU %d]   Calculated tiles: A=%dx%d, B=%dx%d, C=%dx%d\n", 
                pid, matrix1_tiles_rowwise, matrix1_tiles_colwise, 
                matrix2_tiles_rowwise, matrix2_tiles_colwise,
@@ -262,8 +215,8 @@ int main() {
                 // // All threads except tasklet 0: Compute on compute_buffer while thread 0 was loading load_buffer
                 if (!first_iteration && pid != 0) {
                     compute_tile_tasklet(pid, NR_TASKLETS, 
-                                       MATRIX_MULTIPLY_ARGUMENTS.matrix1_tile_rows, 
-                                       MATRIX_MULTIPLY_ARGUMENTS.matrix2_tile_cols, 
+                                       MATRIX_MULTIPLY_ARGUMENTS.result_tile_rows, 
+                                       MATRIX_MULTIPLY_ARGUMENTS.result_tile_cols, 
                                        MATRIX_MULTIPLY_ARGUMENTS.matrix1_tile_cols,
                                        compute_buffer);
                 }
@@ -292,8 +245,8 @@ int main() {
             // // Process the last loaded tiles (tasklet 0 doesn't compute)
             if (pid != 0) {
                 compute_tile_tasklet(pid, NR_TASKLETS, 
-                                   MATRIX_MULTIPLY_ARGUMENTS.matrix1_tile_rows, 
-                                   MATRIX_MULTIPLY_ARGUMENTS.matrix2_tile_cols, 
+                                   MATRIX_MULTIPLY_ARGUMENTS.result_tile_rows, 
+                                   MATRIX_MULTIPLY_ARGUMENTS.result_tile_cols, 
                                    MATRIX_MULTIPLY_ARGUMENTS.matrix1_tile_cols,
                                    compute_buffer);
             }
